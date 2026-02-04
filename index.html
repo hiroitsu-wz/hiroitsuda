@@ -236,6 +236,25 @@
                 text-align: center !important;
             }
         }
+        /* 自己紹介セクション専用の背景画像設定 */
+        .profile-bg-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%; /* 画像の大きさ。好みで調整してください */
+            max-width: 500px;
+            opacity: 0.3; /* 透かし具合（0.1〜1.0）文字を読みやすくするために薄くしています */
+            z-index: -1;   /* 文字の背面に配置 */
+            pointer-events: none; /* 画像がクリックの邪魔をしないようにする */
+            object-fit: contain;
+        }
+
+        /* 相対位置の基準にするための設定 */
+        .relative-box {
+            position: relative;
+            width: 100%;
+        }
     </style>
 </head>
 
@@ -250,7 +269,9 @@
     <div class="gradient-overlay"></div>
 
     <section>
-        <div class="container full-width">
+        <div class="container full-width relative-box">
+            <img src="alpaca.png" alt="" class="profile-bg-image">
+            
             <div class="text-content">
                 <h2>自己紹介</h2>
                 <p>初めまして！ ひろいつ/Hiroitsu です‼️ 17歳です！<br>
