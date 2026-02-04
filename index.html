@@ -88,7 +88,7 @@
             opacity: 0;
             transform: translateY(30px);
             transition: opacity 1.2s ease-out, transform 1.2s ease-out;
-            position: relative; /* 子要素の基準にする */
+            position: relative;
         }
 
         .container.show {
@@ -100,32 +100,27 @@
             flex: 1;
             text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.8);
             position: relative;
-            z-index: 2; /* 文字を画像より上に */
+            z-index: 2;
         }
 
-        /* ★ここが修正ポイント：アルパカの設定 */
-        /* 透かし画像（アルパカ）の設定：ここを丸ごと入れ替え */
-        .profile-bg-image {
+        /* ★変更点：背景画像の共通設定 */
+        .section-bg-image {
             position: absolute;
-            top:70％;
+            top: 60%; /* 文字の下の方に配置 */
             left: 50%;
-            /* スマホでもPCでも確実に真ん中にする設定 */
-            transform: translate(-50%, -50%); 
-            
-            /* サイズ調整（必要に応じて数字を変えてね） */
+            transform: translate(-50%, -50%);
             width: 90%;
-            max-width: 600px;
-            
+            max-width: 550px;
             opacity: 0;
             z-index: 1;
             pointer-events: none;
             object-fit: contain;
-            /* opacityだけでなく、transformもアニメーションの対象にする */
             transition: opacity 1.5s ease-out 0.3s, transform 1.5s ease-out 0.3s;
         }
 
-        .container.show .profile-bg-image {
-            opacity: 0.4; /* 少し見えやすくしました */
+        /* 表示された時に少し透かして出す */
+        .container.show .section-bg-image {
+            opacity: 0.25; 
         }
 
         .photo-wrapper {
@@ -230,6 +225,13 @@
             }
             .text-content { text-align: center !important; }
             section:nth-child(even) .text-content { text-align: center !important; }
+            
+            /* スマホでアルパカがズレるのを防ぐおまじない */
+            .section-bg-image {
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -245,7 +247,7 @@
 
     <section>
         <div class="container full-width">
-            <img src="alpaca.png" alt="" class="profile-bg-image">
+            <img src="alpaca.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>自己紹介</h2>
                 <p>初めまして！ ひろいつ/Hiroitsu です‼️ 17歳です！<br>
@@ -257,6 +259,7 @@
 
     <section>
         <div class="container">
+            <img src="alpacaeating.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>FOOD</h2>
                 <p>🦐こういうエビとか生き物を感じてしまう系以外全部好きです。</p>
@@ -269,6 +272,7 @@
 
     <section>
         <div class="container">
+            <img src="alpacadrinking.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>DRINK</h2>
                 <p>フルーツ系のジュースが好きです。普段はジャスミン茶をよく飲みます。<br>
@@ -282,6 +286,7 @@
 
     <section>
         <div class="container">
+            <img src="alpacabsk.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>HOBBY</h2>
                 <p>趣味は食べることです。美味しいものを探求するのが日課です。<br>
@@ -295,6 +300,7 @@
 
     <section>
         <div class="container">
+            <img src="alpaca.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>MY IDEAL PARTNER</h2>
                 <p>果物みたいな人が好きです。<br>
