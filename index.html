@@ -104,18 +104,24 @@
         }
 
         /* ★ここが修正ポイント：アルパカの設定 */
+        /* 透かし画像（アルパカ）の設定：ここを丸ごと入れ替え */
         .profile-bg-image {
             position: absolute;
-            top: 30%;
+            top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            width: 110%;
-            max-width: 500px;
+            /* スマホでもPCでも確実に真ん中にする設定 */
+            transform: translate(-50%, -50%); 
+            
+            /* サイズ調整（必要に応じて数字を変えてね） */
+            width: 90%;
+            max-width: 600px;
+            
             opacity: 0;
-            z-index: 1; /* 背景(-1)より上で、文字(2)より下 */
+            z-index: 1;
             pointer-events: none;
             object-fit: contain;
-            transition: opacity 1.5s ease-out 0.3s;
+            /* opacityだけでなく、transformもアニメーションの対象にする */
+            transition: opacity 1.5s ease-out 0.3s, transform 1.5s ease-out 0.3s;
         }
 
         .container.show .profile-bg-image {
