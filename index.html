@@ -88,7 +88,7 @@
             opacity: 0;
             transform: translateY(30px);
             transition: opacity 1.2s ease-out, transform 1.2s ease-out;
-            position: relative; /* 背景アルパカの基準点 */
+            position: relative;
         }
 
         .container.show {
@@ -101,10 +101,10 @@
             flex: 1;
             text-shadow: 2px 2px 15px rgba(0, 0, 0, 0.9);
             position: relative;
-            z-index: 2; /* 文字を上に */
+            z-index: 2;
         }
 
-        /* アルパカ共通：文の真後ろ、真ん中に配置 */
+        /* 背景アルパカ共通設定 */
         .section-bg-image {
             position: absolute;
             top: 50%;
@@ -113,21 +113,21 @@
             width: 85%;
             max-width: 550px;
             opacity: 0;
-            z-index: 1; /* 文字の後ろ */
+            z-index: 1;
             pointer-events: none;
             object-fit: contain;
             transition: opacity 1.5s ease-out 0.3s;
         }
 
         .container.show .section-bg-image {
-            opacity: 0.25; /* 透かし具合（25%） */
+            opacity: 0.25;
         }
 
         .photo-wrapper {
             flex: 1;
             display: flex;
             justify-content: center;
-            z-index: 3; /* 写真は一番手前 */
+            z-index: 3;
         }
 
         .photo-frame {
@@ -138,6 +138,26 @@
             object-fit: cover;
             border: 2px solid rgba(255, 255, 255, 0.5);
             box-shadow: 0 10px 30px rgba(250, 3, 114, 0.6);
+        }
+
+        /* 動画用スタイル */
+        .video-wrapper {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 30px;
+            aspect-ratio: 16 / 9;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(255, 0, 123, 0.6);
+            border: 2px solid rgb(249, 4, 122);
+            background-color: rgba(0, 0, 0, 0.3);
+            z-index: 3;
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         h2 {
@@ -164,7 +184,7 @@
             font-weight: 500;
         }
 
-        /* セクションごとの左右反転 */
+        /* 左右反転 */
         section:nth-child(even) .container {
             flex-direction: row-reverse;
         }
@@ -176,7 +196,7 @@
             right: 0;
         }
 
-        /* 中央寄せの特別設定 */
+        /* 中央寄せ設定 */
         .full-width {
             flex-direction: column !important;
             text-align: center !important;
@@ -186,13 +206,13 @@
             transform: translateX(-50%);
         }
 
-        /* スマホ対応：アルパカを文の塊の真ん中に固定 */
+        /* スマホ対応 */
         @media (max-width: 768px) {
             .container {
                 flex-direction: column !important;
                 text-align: center !important;
                 gap: 30px;
-                min-height: 350px; /* 安定させるための最低高さ */
+                min-height: 350px;
                 justify-content: center;
             }
             h2 { font-size: 2.2rem; }
@@ -296,6 +316,19 @@
         </div>
     </section>
 
+    <section>
+        <div class="container full-width">
+            <img src="alpacabsk.png" alt="" class="section-bg-image">
+            <div class="text-content">
+                <h2>BASKETBALL</h2>
+                <p>The Most Memorable Game</p>
+            </div>
+            <div class="video-wrapper">
+                <video src="douga.mov" controls preload="metadata"></video>
+            </div>
+        </div>
+    </section>
+
     <script>
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -307,8 +340,4 @@
             });
         }, { threshold: 0.1 });
 
-        document.querySelectorAll('.container').forEach(c => observer.observe(c));
-    </script>
-
-</body>
-</html>
+        document.querySelectorAll('.container').forEach(c => observer.observe(
