@@ -74,7 +74,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 120px 5% 100px 5%;
+            padding: 100px 5%;
             box-sizing: border-box;
             position: relative;
         }
@@ -88,7 +88,7 @@
             opacity: 0;
             transform: translateY(30px);
             transition: opacity 1.2s ease-out, transform 1.2s ease-out;
-            position: relative;
+            position: relative; /* 背景アルパカの基準点 */
         }
 
         .container.show {
@@ -96,59 +96,43 @@
             transform: translateY(0);
         }
 
-        /* テキストの設定：画像より手前に出す */
+        /* テキスト：画像より手前に出す */
         .text-content {
             flex: 1;
             text-shadow: 2px 2px 15px rgba(0, 0, 0, 0.9);
             position: relative;
-            z-index: 2; /* ここが重要：画像より上のレイヤーにする */
+            z-index: 2; /* 文字を上に */
         }
 
-        /* ★背景画像の共通設定（文の真後ろに配置） */
+        /* アルパカ共通：文の真後ろ、真ん中に配置 */
         .section-bg-image {
             position: absolute;
-            top:20%;
+            top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 95%;
-            max-width: 650px;
+            width: 85%;
+            max-width: 550px;
             opacity: 0;
-            z-index: 1; /* 文字(z-index: 2)の後ろ */
+            z-index: 1; /* 文字の後ろ */
             pointer-events: none;
             object-fit: contain;
-            transition: opacity 1.5s ease-out 0.3s, transform 1.5s ease-out 0.3s;
+            transition: opacity 1.5s ease-out 0.3s;
         }
 
-        /* セクションが表示された時に「透かし」として出す */
         .container.show .section-bg-image {
-            opacity: 0.25; /* 文字が読みやすいように25%くらいの薄さに設定 */
+            opacity: 0.25; /* 透かし具合（25%） */
         }
 
         .photo-wrapper {
             flex: 1;
             display: flex;
             justify-content: center;
-            opacity: 0;
-            transform: scale(0.9);
-            transition: all 1.0s ease-out 0.5s;
             z-index: 3; /* 写真は一番手前 */
-        }
-
-        .container.show .photo-wrapper {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        section:nth-child(even) .container {
-            flex-direction: row-reverse;
-        }
-        section:nth-child(even) .text-content {
-            text-align: right;
         }
 
         .photo-frame {
             width: 100%;
-            max-width: 450px;
+            max-width: 400px;
             aspect-ratio: 16 / 9;
             border-radius: 15px;
             object-fit: cover;
@@ -174,64 +158,50 @@
             background: #00ffff;
         }
 
-        section:nth-child(even) h2::after {
-            left: auto;
-            right: 0;
-        }
-
         p {
             font-size: 1.3rem;
             line-height: 1.8;
             font-weight: 500;
         }
 
+        /* セクションごとの左右反転 */
+        section:nth-child(even) .container {
+            flex-direction: row-reverse;
+        }
+        section:nth-child(even) .text-content {
+            text-align: right;
+        }
+        section:nth-child(even) h2::after {
+            left: auto;
+            right: 0;
+        }
+
+        /* 中央寄せの特別設定 */
         .full-width {
             flex-direction: column !important;
             text-align: center !important;
         }
-
         .full-width h2::after {
             left: 50% !important;
             transform: translateX(-50%);
         }
 
-        .video-wrapper {
-            width: 100%;
-            max-width: 800px;
-            margin-top: 30px;
-            aspect-ratio: 16 / 9;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(255, 0, 123, 0.6);
-            border: 2px solid rgb(249, 4, 122);
-            background-color: rgba(0, 0, 0, 0.3);
-            z-index: 3;
-        }
-
-        .video-wrapper video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
+        /* スマホ対応：アルパカを文の塊の真ん中に固定 */
         @media (max-width: 768px) {
-            .header-fixed { font-size: 1.1rem; }
             .container {
                 flex-direction: column !important;
                 text-align: center !important;
                 gap: 30px;
+                min-height: 350px; /* 安定させるための最低高さ */
+                justify-content: center;
             }
-            h2 { font-size: 2rem; }
-            h2::after {
-                left: 50% !important;
-                transform: translateX(-50%);
-            }
-            .text-content { text-align: center !important; }
-            section:nth-child(even) .text-content { text-align: center !important; }
-            
+            h2 { font-size: 2.2rem; }
+            p { font-size: 1.1rem; }
             .section-bg-image {
                 width: 100%;
-                top: 50%;
+                top: 50% !important;
+                left: 50% !important;
+                transform: translate(-50%, -50%) !important;
             }
         }
     </style>
@@ -248,7 +218,7 @@
 
     <section>
         <div class="container full-width">
-            <img src="alpaca.png" alt="自己紹介アルパカ" class="section-bg-image">
+            <img src="alpaca.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>自己紹介</h2>
                 <p>初めまして！ ひろいつ/Hiroitsu です‼️ 17歳です！<br>
@@ -260,7 +230,7 @@
 
     <section>
         <div class="container">
-            <img src="alpacaeating.png" alt="食べるアルパカ" class="section-bg-image">
+            <img src="alpacaeating.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>FOOD</h2>
                 <p>🦐こういうエビとか生き物を感じてしまう系以外全部好きです。</p>
@@ -273,7 +243,7 @@
 
     <section>
         <div class="container">
-            <img src="alpacadrinking.png" alt="飲むアルパカ" class="section-bg-image">
+            <img src="alpacadrinking.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>DRINK</h2>
                 <p>フルーツ系のジュースが好きです。普段はジャスミン茶をよく飲みます。<br>
@@ -287,7 +257,7 @@
 
     <section>
         <div class="container">
-            <img src="alpacabsk.png" alt="バスケアルパカ" class="section-bg-image">
+            <img src="alpacabsk.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>HOBBY</h2>
                 <p>趣味は食べることです。美味しいものを探求するのが日課です。<br>
@@ -301,7 +271,7 @@
 
     <section>
         <div class="container">
-            <img src="alpaca.png" alt="理想アルパカ" class="section-bg-image">
+            <img src="alpacasukipi.png" alt="" class="section-bg-image">
             <div class="text-content">
                 <h2>MY IDEAL PARTNER</h2>
                 <p>果物みたいな人が好きです。<br>
@@ -320,20 +290,8 @@
                 <h2>FINALLY</h2>
                 <p>怒られると耳が痛くなって少し鬱になりがちです。<br>
                 結構嫌なこととかがあったらずっと抱え込んででしまいます。<br>
-                僕を褒めてください。でも褒められてやるやる時もあれば、少し油断してしまう自分がいます。<br>
+                僕を褒めてください。でも褒められてやる気になる時もあれば、少し油断してしまう自分がいます。<br>
                 前向きになれる注意の仕方をしていただければ次に切り替えられます。よろしくお願いします。🙇</p>
-            </div>
-        </div>
-    </section>
-
-    <section>
-        <div class="container full-width">
-            <div class="text-content">
-                <h2>BASKETBALL</h2>
-                <p>The Most Memorable Game</p>
-            </div>
-            <div class="video-wrapper">
-                <video src="douga.mov" controls preload="metadata"></video>
             </div>
         </div>
     </section>
@@ -347,9 +305,7 @@
                     entry.target.classList.remove('show');
                 }
             });
-        }, {
-            threshold: 0.2
-        });
+        }, { threshold: 0.1 });
 
         document.querySelectorAll('.container').forEach(c => observer.observe(c));
     </script>
