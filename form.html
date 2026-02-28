@@ -9,13 +9,13 @@
     <h1>お問い合わせフォーム</h1>
     <form action="#" method="post">
       <dl>
-        <dt>お名前</dt>
-        <dd><input type="text" name="username" /></dd>
-        <dt>メールアドレス</dt>
-        <dd><input type="text" name="email" /></dd>
-        <dt>お住まいの地域</dt>
+        <dt><label for="username">お名前</label></dt>
+        <dd><input id="username" type="text" name="username" /></dd>
+        <dt><label for="email">メールアドレス</label></dt>
+        <dd><input id="email" type="text" name="email" /></dd>
+        <dt><label for="area">お住まいの地域</label></dt>
         <dd>
-          <select name="area">
+          <select id="area" name="area">
             <option value="" selected>選択してください</option>
             <option value="hokkido">北海道</option>
             <option value="tohoku">東北</option>
@@ -29,17 +29,34 @@
         </dd>
         <dt>性別</dt>
         <dd>
-          <input type="radio" name="gender" value="male" checked />男性
-          <input type="radio" name="gender" value="female" />女性
+          <label
+            ><input
+              type="radio"
+              name="gender"
+              value="male"
+              checked
+            />男性</label
+          >
+          <label><input type="radio" name="gender" value="female" />女性</label>
         </dd>
-        <dt>ご要望</dt>
+        <dt><label for="contents">お問い合わせ内容</label></dt>
         <dd>
           <select name="request">
-            <option value="1page">ホームページ作成（1ページ）</option>
-            <option value="3~5page">ホームページ作成（3〜5ページ</option>
-          </select>
+            <label
+              ><option value="1page">ホームページ作成（1ページ）</option></label
+            >
+            <option value="3~5page">
+              ホームページ作成（3〜5ページ
+            </option></select
+          ><br />
+          <textarea id="contents" name="contents"></textarea>
+        </dd>
+        <dt><label for="privacy">プライバシーポリシーに同意する</label></dt>
+        <dd>
+          <input id="privacy" type="checkbox" name="privacy" value="1" />
         </dd>
       </dl>
+      <input type="submit" value="送信" />
     </form>
   </body>
 </html>
