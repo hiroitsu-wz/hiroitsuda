@@ -9,6 +9,23 @@
         background-image: url(dot.png);
         overflow-x: hidden; /* ボールが画面外に転がっても横スクロールが出ないようにする */
       }
+      p {
+        background-color: rgba(
+          255,
+          255,
+          255,
+          0.85
+        ); /* 漫画っぽく白背景（少し透かす） */
+        color: #333;
+        border: 2px solid #333; /* 漫画の枠線のような黒い縁取り */
+        padding: 10px 30px; /* 横を広めにとると楕円感が出ます */
+        border-radius: 100px; /* 圧倒的丸み */
+        display: inline-block; /* 文字の長さに背景を合わせる */
+        margin: 15px 20px;
+        box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.1); /* 少し影をつけて立体的に */
+        line-height: 1.6;
+        vertical-align: middle;
+      }
       h1 {
         background-color: rgba(137, 178, 254, 0.982);
         color: rgb(255, 255, 255);
@@ -45,10 +62,12 @@
   <body>
     <a href="page2.html">お問い合わせはこちら</a>
     <h1>自己紹介</h1>
-    はじめまして。Taniです。<br />
-    日々、WEB作成を学びながらこのサイトもよりよくしていきます。<br />
-    TANI THE WORLD全開で人生楽しんでいきます。
-    <br />
+    <p>
+      はじめまして。Taniです。<br />
+      日々、WEB作成を学びながらこのサイトもよりよくしていきます。<br />
+      TANI THE WORLD全開で人生楽しんでいきます。
+      <br />
+    </p>
 
     <a href="#journey">僕のTABI THE WORLDへ</a>
     <h2>趣味</h2>
