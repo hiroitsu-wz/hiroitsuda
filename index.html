@@ -173,10 +173,11 @@
           observer.observe(el);
         });
 
-        // --- 2. バスケ演出 ---
+        // --- 2. バスケ演出（修正版） ---
         const basketballH3 = Array.from(document.querySelectorAll("h3")).find(
           (h3) => h3.innerText.includes("バスケットボール"),
         );
+
         if (basketballH3) {
           const ball = document.createElement("span");
           ball.innerText = "🏀";
@@ -187,12 +188,19 @@
             (entries) => {
               entries.forEach((entry) => {
                 if (entry.isIntersecting) {
-                  ball.style.transform = "translateX(300px) rotate(720deg)";
+                  // 少しだけ時間を遅らせて転がす（確実に見えるようにするため）
+                  setTimeout(() => {
+                    ball.style.transform = "translateX(300px) rotate(720deg)";
+                  }, 100);
+                } else {
+                  // 画面から消えたら元の位置に戻す（何度でも転がるようにする）
+                  ball.style.transform = "translateX(0) rotate(0deg)";
                 }
               });
             },
-            { threshold: 1.0 },
-          );
+            { threshold: 0.5 },
+          ); // 半分以上見えたらスタート
+
           ballObserver.observe(basketballH3);
         }
 
