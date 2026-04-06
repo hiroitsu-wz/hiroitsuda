@@ -17,7 +17,7 @@
         padding-bottom: 50px;
       }
 
-      /* 共通：漫画風デザイン（楕円・枠線） */
+      /* 共通デザイン */
       p,
       ul,
       h2 {
@@ -31,38 +31,31 @@
         line-height: 1.6;
         vertical-align: middle;
       }
-
-      /* 個別の形設定 */
       p,
       ul {
-        border-radius: 100px; /* 楕円 */
+        border-radius: 100px;
       }
-
       h2 {
-        border-radius: 10px; /* 四角寄り */
+        border-radius: 10px;
         color: rgba(54, 163, 116, 0.982);
       }
-
       h1 {
         background-color: rgba(137, 178, 254, 0.982);
-        color: rgb(255, 255, 255);
+        color: white;
         margin: 20px;
         padding: 10px;
         display: block;
       }
-
       h3 {
         background-color: rgb(148, 226, 177);
-        color: rgb(255, 255, 255);
+        color: white;
         margin: 20px;
         padding: 5px 15px;
       }
-
       ul {
         margin-left: 50px;
         list-style-position: inside;
       }
-
       a {
         margin: 10px 20px;
         display: inline-block;
@@ -70,22 +63,122 @@
         text-decoration: none;
         font-weight: bold;
       }
-
       .red {
         color: red;
         font-weight: bold;
       }
 
-      /* バスケのボール */
-      .ball {
+      /* スライドショー設定 */
+      .slideshow-container {
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 30px;
+        height: 60vh;
+      }
+      @media screen and (max-width: 768px) {
+        .slideshow-container {
+          height: 40vh;
+        }
+      }
+
+      .slides-wrapper {
+        display: flex;
+        width: 400%; /* 写真4枚なので400% */
+        height: 100%;
+        transition: transform 1s ease-in-out;
+      }
+
+      .mySlides {
+        width: 25%; /* 4枚なので1枚あたり25% */
+        height: 100%;
+        flex-shrink: 0;
+      }
+
+      .mySlides img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* PC・スマホ両対応で見栄え良く */
+        display: block;
+      }
+
+      .prev-btn,
+      .next-btn {
+        cursor: pointer;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        padding: 16px;
+        color: white;
+        font-size: 24px;
+        background-color: rgba(0, 0, 0, 0.3);
+        z-index: 10;
+        margin: 0;
+      }
+      .next-btn {
+        right: 10px;
+      }
+      .prev-btn {
+        left: 10px;
+      }
+
+      .dot-container {
+        text-align: center;
+        position: absolute;
+        bottom: 15px;
+        width: 100%;
+        z-index: 15;
+      }
+      .dot {
+        cursor: pointer;
+        height: 12px;
+        width: 12px;
+        margin: 0 5px;
+        background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
         display: inline-block;
-        margin-left: 10px;
-        font-size: 1.5rem;
-        transition: transform 2s ease-out;
+      }
+      .dot.active {
+        background-color: white;
+      }
+
+      /* Instagramリンク用の設定 */
+      .mySlides a {
+        display: block;
+        width: 100%;
+        height: 100%;
+        margin: 0;
       }
     </style>
   </head>
   <body>
+    <div class="slideshow-container">
+      <div class="slides-wrapper" id="slidesWrapper">
+        <div class="mySlides">
+          <a
+            href="https://www.instagram.com/tani_the_world"
+            target="_blank"
+            rel="noopener"
+          >
+            <img src="Instagram.png" alt="スライド1" style="cursor: pointer" />
+          </a>
+        </div>
+        <div class="mySlides"><img src="img2.jpg" alt="スライド2" /></div>
+        <div class="mySlides"><img src="img3.jpg" alt="スライド3" /></div>
+        <div class="mySlides"><img src="img4.jpg" alt="スライド4" /></div>
+      </div>
+
+      <a class="prev-btn" onclick="plusSlides(-1)">&#10094;</a>
+      <a class="next-btn" onclick="plusSlides(1)">&#10095;</a>
+
+      <div class="dot-container">
+        <span class="dot" onclick="currentSlide(1)"></span>
+        <span class="dot" onclick="currentSlide(2)"></span>
+        <span class="dot" onclick="currentSlide(3)"></span>
+        <span class="dot" onclick="currentSlide(4)"></span>
+      </div>
+    </div>
+
     <a href="page2.html">お問い合わせはこちら</a>
 
     <h1>自己紹介</h1>
@@ -95,163 +188,58 @@
       TANI THE WORLD全開で人生楽しんでいきます。
     </p>
 
-    <br />
-    <a href="#journey">僕のTABI THE WORLDへ</a>
-
-    <h2>趣味</h2>
-    <ul>
-      <li>バスケットボール</li>
-      <li>最高な曲を聴き続けること</li>
-      <li>友達と遊ぶこと</li>
-      <li>新しいことに挑戦すること</li>
-    </ul>
-
-    <h3>◦バスケットボール</h3>
-    <p>
-      バスケットボールは小学一年生の頃にはじめ、高校の部活を引退した後も、時々バスケをしています。<br />
-      みなさん、バスケで楽しみましょう。
-    </p>
-
-    <h3>◦曲</h3>
-    <p>旅がワクワクするようなテンポの曲を聴くとつい踊ってしまいます。</p>
-
-    <h3>◦友達と遊ぶこと</h3>
-    <p>
-      釣りも好きですが、なかなか釣れなくて行くのが億劫に感じてしまいました。
-    </p>
-
-    <h3>◦新しいことに挑戦すること</h3>
-    <p>自分でバイトして稼いでその分楽しめるようにしたいです。</p>
-
-    <h1 id="journey">僕のTABI THE WORLD</h1>
-    <p>
-      <span class="red">新たな経験</span>を通して、未知の<span class="red"
-        >景色</span
-      >に出逢いに行きます。
-    </p>
-
-    <hr />
-    <h1 style="background-color: rgb(255, 144, 233)">僕のInstagram account</h1>
-    <p>
-      ↓↓↓プログラミング勉強垢<br />
-      <a
-        href="https://www.instagram.com/tani_the_world"
-        target="_blank"
-        rel="noopener"
-        >@tani_the_world</a
-      >
-    </p>
-    <p>
-      ↓↓↓ 個人ブログ垢<br />
-      <a
-        href="https://www.instagram.com/hiro___2o_8"
-        target="_blank"
-        rel="noopener"
-        >@hiro___2o_8</a
-      >
-    </p>
-
     <script>
-      window.addEventListener("DOMContentLoaded", () => {
-        // --- 1. ふわっと表示 ---
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) {
-                entry.target.style.opacity = "1";
-                entry.target.style.transform = "translateY(0)";
-              }
-            });
-          },
-          { threshold: 0.1 },
-        );
+      let slideIndex = 1;
+      let slideTimer;
+      const autoPlayDelay = 5000;
 
-        document.querySelectorAll("h2, h3, p, ul").forEach((el) => {
-          el.style.opacity = "0";
-          el.style.transform = "translateY(30px)";
-          el.style.transition = "all 1s ease-out";
-          observer.observe(el);
-        });
+      showSlides(slideIndex);
+      startAutoPlay();
 
-        // --- 2. バスケ演出（修正版） ---
-        const basketballH3 = Array.from(document.querySelectorAll("h3")).find(
-          (h3) => h3.innerText.includes("バスケットボール"),
-        );
+      function startAutoPlay() {
+        slideTimer = setInterval(() => {
+          plusSlides(1);
+        }, autoPlayDelay);
+      }
 
-        if (basketballH3) {
-          const ball = document.createElement("span");
-          ball.innerText = "🏀";
-          ball.className = "ball";
-          basketballH3.appendChild(ball);
+      function plusSlides(n) {
+        showSlides((slideIndex += n));
+      }
+      function currentSlide(n) {
+        showSlides((slideIndex = n));
+      }
 
-          const ballObserver = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                  // 少しだけ時間を遅らせて転がす（確実に見えるようにするため）
-                  setTimeout(() => {
-                    ball.style.transform = "translateX(300px) rotate(720deg)";
-                  }, 100);
-                } else {
-                  // 画面から消えたら元の位置に戻す（何度でも転がるようにする）
-                  ball.style.transform = "translateX(0) rotate(0deg)";
-                }
-              });
-            },
-            { threshold: 0.5 },
-          ); // 半分以上見えたらスタート
+      function showSlides(n) {
+        const wrapper = document.getElementById("slidesWrapper");
+        const slides = document.getElementsByClassName("mySlides");
+        const dots = document.getElementsByClassName("dot");
 
-          ballObserver.observe(basketballH3);
+        if (n > slides.length) {
+          slideIndex = 1;
+        }
+        if (n < 1) {
+          slideIndex = slides.length;
         }
 
-        // --- 3. タイトル覚醒 ---
-        document.querySelectorAll("h1").forEach((h1) => {
-          h1.style.cursor = "pointer";
-          h1.addEventListener("click", () => {
-            const colors = [
-              "#FFD700",
-              "#FF4500",
-              "#1E90FF",
-              "#32CD32",
-              "#FF69B4",
-            ];
-            h1.style.backgroundColor =
-              colors[Math.floor(Math.random() * colors.length)];
-          });
-        });
-        // --- 4. 音声リンク（音の使い分け） ---
-        const clickSound = new Audio("click.mp3"); // インスタ用
-        const syunkanSound = new Audio("syunkan.mp3"); // ページ内リンク用
+        const translateValue = -(slideIndex - 1) * 100;
+        wrapper.style.transform = `translateX(${translateValue}%)`;
 
-        const allLinks = document.querySelectorAll(
-          'a[href*="instagram"], a[href^="#"]',
-        );
+        for (let i = 0; i < dots.length; i++) {
+          dots[i].className = dots[i].className.replace(" active", "");
+        }
+        dots[slideIndex - 1].className += " active";
+        resetTimer();
+      }
 
-        allLinks.forEach((link) => {
-          const originalText = link.innerText;
-          const href = link.getAttribute("href");
+      function resetTimer() {
+        clearInterval(slideTimer);
+        startAutoPlay();
+      }
 
-          link.addEventListener("mouseenter", () => {
-            if (href.includes("instagram")) {
-              link.innerText = "🚀 爆速でチェックする！";
-            }
-          });
-          link.addEventListener("mouseleave", () => {
-            link.innerText = originalText;
-          });
-
-          // クリック時の処理
-          link.addEventListener("click", () => {
-            if (href.startsWith("#")) {
-              syunkanSound
-                .play()
-                .catch(() => console.log("syunkan.mp3再生不可"));
-            } else {
-              clickSound.play().catch(() => console.log("click.mp3再生不可"));
-            }
-          });
-        }); // これは allLinks.forEach の閉じ
-      }); // ★この行を追加！これが window.addEventListener の閉じです
+      // バスケやふわっと表示のJSはそのまま下に続けてください
+      window.addEventListener("DOMContentLoaded", () => {
+        // ...（既存のふわっと表示やバスケ演出のコード）...
+      });
     </script>
   </body>
 </html>
