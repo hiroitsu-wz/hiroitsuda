@@ -2,234 +2,92 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-    <title>PUYOichi MINI - Ultra Compact</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>PUYOichi MINI - Mobile Edition</title>
     <style>
-      /* 画面が揺れないように固定 */
-      html,
       body {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
         background-color: #0f172a;
-        touch-action: none; /* スワイプによる画面移動を禁止 */
-      }
-      body {
         color: white;
-        font-family: sans-serif;
+        text-align: center;
+        font-family: "Segoe UI", sans-serif;
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start; /* 上から詰める */
-        align-items: center;
-      }
-
-      /* 背景デザインを控えめに（重なり防止） */
-      .moon {
-        position: absolute;
-        width: 300px;
-        height: 150px;
-        filter: blur(50px);
-        z-index: -1;
-        opacity: 0.2;
-      }
-      .moon-upper {
-        top: -20px;
-        right: -50px;
-        background: #38bdf8;
-        border-radius: 50%;
-      }
-
-      /* タイトルとスコアを一行にまとめて節約 */
-      .header-area {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 90%;
-        margin-top: 5px;
-      }
-      h1 {
-        font-size: 16px;
-        margin: 0;
-      }
-      .info {
-        font-size: 18px;
-        font-weight: bold;
-        margin: 0;
-        color: #38bdf8;
-      }
-
-      /* モーダル */
-      #overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.95);
-        z-index: 100;
-        display: flex;
         justify-content: center;
         align-items: center;
+        touch-action: manipulation; /* ダブルタップズーム防止 */
       }
-      .modal {
-        background: #1e293b;
-        padding: 20px;
-        border-radius: 15px;
-        width: 80%;
-        max-width: 260px;
-        border: 1px solid #334155;
-      }
-      input {
-        padding: 10px;
-        font-size: 16px;
-        margin: 5px 0;
-        width: 90%;
-        background: #0f172a;
-        color: white;
-        border: 1px solid #334155;
-        border-radius: 8px;
-      }
+      .moon { position: absolute; width: 600px; height: 300px; filter: blur(80px); z-index: -1; opacity: 0.3; }
+      .moon-upper { top: -100px; right: -150px; background: linear-gradient(to bottom, #38bdf8, #818cf8); border-radius: 300px; transform: rotate(25deg); }
+      .moon-lower { bottom: -100px; left: -150px; background: linear-gradient(to top, #fb7185, #f472b6); border-radius: 300px; transform: rotate(25deg); }
 
-      /* ★ここが重要：Canvasのサイズ制限 */
-      canvas {
-        background: rgba(30, 41, 59, 0.95);
-        border: 2px solid #475569;
-        border-radius: 8px;
-        max-height: 45vh; /* 画面の高さの45%以内に抑える */
-        width: auto;
-        margin-top: 5px;
-      }
+      #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); z-index: 100; display: flex; justify-content: center; align-items: center; }
+      .modal { background: #1e293b; padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 2px solid #334155; text-align: center; width: 85%; max-width: 320px; }
+      input { padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #334155; margin: 8px 0; width: 90%; background: #0f172a; color: white; }
+      
+      canvas { background: rgba(30, 41, 59, 0.95); border: 4px solid #475569; border-radius: 12px; max-height: 60vh; width: auto; }
+      
+      .info { margin-top: 10px; font-size: 24px; font-weight: 800; }
+      #score { color: #38bdf8; }
+      #chain-msg { position: absolute; top: 20%; color: #facc15; font-size: 36px; font-weight: 900; pointer-events: none; text-shadow: 2px 2px 0 #000; z-index: 5; }
 
-      #chain-msg {
-        position: absolute;
-        top: 15%;
-        color: #facc15;
-        font-size: 28px;
-        font-weight: 900;
-        pointer-events: none;
-        text-shadow: 2px 2px 0 #000;
-        z-index: 5;
-      }
-
-      /* コントローラーをコンパクトに */
+      /* スマホ用コントローラー */
       .controller {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
-        width: 95%;
+        gap: 10px;
+        margin-top: 15px;
+        width: 90%;
         max-width: 300px;
-        margin-top: 8px;
       }
       .ctrl-btn {
         background: #334155;
         border: none;
-        border-radius: 10px;
+        border-radius: 12px;
         color: white;
-        font-size: 20px;
-        padding: 10px 0;
+        font-size: 24px;
+        padding: 15px 0;
         touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
       }
-      .btn-rotate {
-        background: #8b5cf6;
-      }
-      .btn-drop {
-        background: #3b82f6;
-        grid-column: span 3;
-        padding: 8px 0;
-        font-size: 14px;
-        font-weight: bold;
-      }
+      .ctrl-btn:active { background: #475569; transform: scale(0.95); }
+      .btn-rotate { background: #8b5cf6; }
+      .btn-drop { background: #3b82f6; grid-column: span 3; padding: 10px 0; font-size: 18px; }
 
-      /* システムボタン */
-      .system-btns {
-        display: flex;
-        gap: 5px;
-        margin-top: 5px;
-      }
-      .sys-btn {
-        padding: 5px 10px;
-        font-size: 11px;
-        border: none;
-        border-radius: 4px;
-        color: white;
-        background: #475569;
-      }
-
-      .hidden {
-        display: none !important;
-      }
-      table {
-        width: 100%;
-        font-size: 11px;
-      }
+      .system-btns { display: flex; gap: 8px; margin-top: 10px; }
+      .sys-btn { padding: 8px 15px; font-size: 14px; border-radius: 6px; border: none; color: white; background: #475569; }
+      
+      .hidden { display: none !important; }
+      table { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 14px; }
+      th, td { padding: 8px; border-bottom: 1px solid #334155; }
+      .highlight { color: #facc15; font-weight: bold; }
     </style>
   </head>
   <body>
     <div class="moon moon-upper"></div>
+    <div class="moon moon-lower"></div>
 
     <div id="overlay">
       <div id="start-modal" class="modal">
-        <h2 style="margin: 0 0 10px 0; font-size: 18px">Login</h2>
-        <input
-          type="text"
-          id="nickname"
-          placeholder="ニックネーム"
-          maxlength="10"
-        />
-        <input
-          type="password"
-          id="userPass"
-          placeholder="合言葉"
-          maxlength="10"
-        />
-        <button
-          id="startBtn"
-          style="
-            margin-top: 10px;
-            width: 100%;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-            font-weight: bold;
-          "
-        >
-          START
-        </button>
+        <h2 style="margin: 0 0 15px 0">PUYOichi Login</h2>
+        <input type="text" id="nickname" placeholder="ニックネーム" maxlength="10" /><br />
+        <input type="password" id="userPass" placeholder="合言葉" maxlength="10" /><br />
+        <button id="startBtn" style="margin-top: 15px; width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold;">GAME START</button>
       </div>
       <div id="rank-modal" class="modal hidden">
-        <h2 style="margin: 0; font-size: 16px">Rankings</h2>
+        <h2 style="margin: 0 0 10px 0">Rankings</h2>
         <div id="rank-list"></div>
-        <button
-          id="backBtn"
-          style="
-            margin-top: 10px;
-            width: 100%;
-            background: #475569;
-            border: none;
-            color: white;
-            padding: 8px;
-            border-radius: 5px;
-          "
-        >
-          CLOSE
-        </button>
+        <button id="backBtn" style="margin-top: 15px; width: 100%; background: #475569; color: white; border: none; padding: 10px; border-radius: 8px;">CLOSE</button>
       </div>
     </div>
 
-    <div class="header-area">
-      <h1>PUYOichi</h1>
-      <div class="info">SCORE: <span id="score">0</span></div>
-    </div>
-
+    <h1 style="margin: 5px 0; font-size: 20px;">PUYOichi MINI</h1>
     <div id="chain-msg"></div>
     <canvas id="game" width="240" height="480"></canvas>
+    <div class="info">SCORE: <span id="score">0</span></div>
 
     <div class="controller">
       <button class="ctrl-btn" id="m-left">←</button>
@@ -240,16 +98,11 @@
 
     <div class="system-btns">
       <button class="sys-btn" id="pauseBtn">Pause</button>
-      <button class="sys-btn" id="showRankBtn" style="background: #8b5cf6">
-        Rank
-      </button>
-      <button class="sys-btn" id="resetBtn" style="background: #ef4444">
-        Reset
-      </button>
+      <button class="sys-btn" id="showRankBtn" style="background:#8b5cf6">Rank</button>
+      <button class="sys-btn" id="resetBtn" style="background:#ef4444">Reset</button>
     </div>
 
     <script>
-      /* JavaScriptロジックは以前のものをそのまま引き継ぎます */
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const scoreElement = document.getElementById("score");
@@ -258,48 +111,28 @@
       const startModal = document.getElementById("start-modal");
       const rankModal = document.getElementById("rank-modal");
 
-      const ROWS = 12,
-        COLS = 6,
-        SIZE = 40;
-      const COLORS = [
-        null,
-        "#ef4444",
-        "#22c55e",
-        "#3b82f6",
-        "#eab308",
-        "#a855f7",
-      ];
-      let puyoImages = [],
-        puyoSounds = [];
+      const ROWS = 12, COLS = 6, SIZE = 40;
+      const COLORS = [null, "#ef4444", "#22c55e", "#3b82f6", "#eab308", "#a855f7"];
+
+      let puyoImages = [], puyoSounds = [];
       [1, 2, 3, 4, 5].forEach((i) => {
-        const img = new Image();
-        img.src = `puyo${i}.png`;
-        puyoImages[i] = img;
-        const snd = new Audio(`se${i}.mp3`);
-        puyoSounds[i] = snd;
+        const img = new Image(); img.src = `puyo${i}.png`; puyoImages[i] = img;
+        const snd = new Audio(`se${i}.mp3`); puyoSounds[i] = snd;
       });
 
       let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-      let score = 0,
-        activePuyo = null,
-        isProcessing = false,
-        isPaused = false,
-        gameRunning = false;
-      let playerName = "",
-        playerPass = "";
+      let score = 0, activePuyo = null, isProcessing = false, isPaused = false, gameRunning = false;
+      let playerName = "", playerPass = "";
 
       class PuyoPair {
         constructor() {
-          this.x = 2;
-          this.y = 0;
-          this.rot = 0;
+          this.x = 2; this.y = 0; this.rot = 0;
           this.c1 = Math.floor(Math.random() * 5) + 1;
           this.c2 = Math.floor(Math.random() * 5) + 1;
         }
         getPos() {
           const pos = [{ x: this.x, y: this.y, c: this.c1 }];
-          const ox = [0, 1, 0, -1][this.rot],
-            oy = [-1, 0, 1, 0][this.rot];
+          const ox = [0, 1, 0, -1][this.rot], oy = [-1, 0, 1, 0][this.rot];
           pos.push({ x: this.x + ox, y: this.y + oy, c: this.c2 });
           return pos;
         }
@@ -307,20 +140,12 @@
 
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        board.forEach((row, y) =>
-          row.forEach((val, x) => {
-            if (val) drawUnit(x, y, val);
-          }),
-        );
-        if (activePuyo)
-          activePuyo.getPos().forEach((p) => drawUnit(p.x, p.y, p.c));
+        board.forEach((row, y) => row.forEach((val, x) => { if (val) drawUnit(x, y, val); }));
+        if (activePuyo) activePuyo.getPos().forEach((p) => drawUnit(p.x, p.y, p.c));
         if (isPaused) {
-          ctx.fillStyle = "rgba(0,0,0,0.6)";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.fillStyle = "white";
-          ctx.font = "bold 24px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText("PAUSED", canvas.width / 2, 240);
+          ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "white"; ctx.font = "bold 24px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText("PAUSED", canvas.width/2, 240);
         }
       }
 
@@ -330,9 +155,9 @@
           ctx.drawImage(img, x * SIZE + 1, y * SIZE + 1, SIZE - 2, SIZE - 2);
         } else {
           ctx.fillStyle = COLORS[colorIndex];
-          ctx.beginPath();
-          ctx.arc(x * SIZE + 20, y * SIZE + 20, 18, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.arc(x * SIZE + 20, y * SIZE + 20, 18, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.3)";
+          ctx.beginPath(); ctx.arc(x * SIZE + 14, y * SIZE + 14, 5, 0, Math.PI * 2); ctx.fill();
         }
       }
 
@@ -342,20 +167,11 @@
           if (!activePuyo) {
             activePuyo = new PuyoPair();
             if (checkCollision(activePuyo)) {
-              saveScore(score);
-              alert(`Score: ${score}`);
-              gameRunning = false;
-              showRanking();
-              return;
+              saveScore(score); alert(`GAME OVER!\nScore: ${score}`);
+              gameRunning = false; showRanking(); return;
             }
           } else {
-            if (!move(0, 1)) {
-              lockPuyo();
-              activePuyo = null;
-              isProcessing = true;
-              await handleChain();
-              isProcessing = false;
-            }
+            if (!move(0, 1)) { lockPuyo(); activePuyo = null; isProcessing = true; await handleChain(); isProcessing = false; }
           }
         }
         draw();
@@ -365,21 +181,17 @@
       async function handleChain() {
         let chainCount = 0;
         while (true) {
-          applyGravity();
-          draw();
+          applyGravity(); draw();
           await new Promise((r) => setTimeout(r, 200));
           const matches = findMatchesAndColors();
-          if (matches.cells.length === 0) break;
+          if (matches.cells.length === 0) {
+            const isAllClear = board.every((row) => row.every((cell) => cell === 0));
+            if (isAllClear && chainCount > 0) { score += 20; scoreElement.innerText = score; showChainMsg("ALL CLEAR!"); }
+            break;
+          }
           chainCount++;
-          matches.colorsFound.forEach((c) => {
-            if (puyoSounds[c]) {
-              const s = puyoSounds[c].cloneNode();
-              s.play().catch(() => {});
-            }
-          });
-          score +=
-            matches.cells.length * 10 +
-            (chainCount > 1 ? (chainCount - 1) * 15 : 0);
+          matches.colorsFound.forEach((c) => { if (puyoSounds[c]) { const s = puyoSounds[c].cloneNode(); s.play().catch(() => {}); } });
+          score += matches.cells.length * 10 + (chainCount > 1 ? (chainCount - 1) * 15 : 0);
           scoreElement.innerText = score;
           showChainMsg(chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!");
           matches.cells.forEach((p) => (board[p.y][p.x] = 0));
@@ -388,174 +200,71 @@
         }
       }
 
-      function showChainMsg(txt) {
-        chainMsg.innerText = txt;
-        setTimeout(() => {
-          if (chainMsg.innerText === txt) chainMsg.innerText = "";
-        }, 1000);
-      }
-      function move(dx, dy) {
-        if (!activePuyo) return false;
-        activePuyo.x += dx;
-        activePuyo.y += dy;
-        if (checkCollision(activePuyo)) {
-          activePuyo.x -= dx;
-          activePuyo.y -= dy;
-          return false;
-        }
-        return true;
-      }
-      function rotate() {
-        if (!activePuyo) return;
-        const old = activePuyo.rot;
-        activePuyo.rot = (activePuyo.rot + 1) % 4;
-        if (checkCollision(activePuyo)) activePuyo.rot = old;
-      }
-      function checkCollision(p) {
-        return p
-          .getPos()
-          .some(
-            (pos) =>
-              pos.x < 0 ||
-              pos.x >= COLS ||
-              pos.y >= ROWS ||
-              (pos.y >= 0 && board[pos.y][pos.x]),
-          );
-      }
-      function lockPuyo() {
-        activePuyo.getPos().forEach((p) => {
-          if (p.y >= 0) board[p.y][p.x] = p.c;
-        });
-      }
-      function applyGravity() {
-        for (let x = 0; x < COLS; x++) {
-          for (let y = ROWS - 1; y >= 0; y--) {
-            if (board[y][x]) {
-              let ty = y;
-              while (ty + 1 < ROWS && board[ty + 1][x] === 0) {
-                board[ty + 1][x] = board[ty][x];
-                board[ty][x] = 0;
-                ty++;
-              }
-            }
-          }
-        }
-      }
+      function showChainMsg(txt) { chainMsg.innerText = txt; setTimeout(() => { if (chainMsg.innerText === txt) chainMsg.innerText = ""; }, 1000); }
+      function move(dx, dy) { if (!activePuyo) return false; activePuyo.x += dx; activePuyo.y += dy; if (checkCollision(activePuyo)) { activePuyo.x -= dx; activePuyo.y -= dy; return false; } return true; }
+      function rotate() { if (!activePuyo) return; const old = activePuyo.rot; activePuyo.rot = (activePuyo.rot + 1) % 4; if (checkCollision(activePuyo)) activePuyo.rot = old; }
+      function checkCollision(p) { return p.getPos().some((pos) => pos.x < 0 || pos.x >= COLS || pos.y >= ROWS || (pos.y >= 0 && board[pos.y][pos.x])); }
+      function lockPuyo() { activePuyo.getPos().forEach((p) => { if (p.y >= 0) board[p.y][p.x] = p.c; }); }
+      function applyGravity() { for (let x = 0; x < COLS; x++) { for (let y = ROWS - 1; y >= 0; y--) { if (board[y][x]) { let ty = y; while (ty + 1 < ROWS && board[ty + 1][x] === 0) { board[ty + 1][x] = board[ty][x]; board[ty][x] = 0; ty++; } } } } }
       function findMatchesAndColors() {
-        let matchedCells = [],
-          colorsFound = new Set(),
-          visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
-        for (let y = 0; y < ROWS; y++) {
-          for (let x = 0; x < COLS; x++) {
-            if (board[y][x] && !visited[y][x]) {
-              let group = [],
-                color = board[y][x],
-                stack = [{ x, y }];
-              while (stack.length) {
-                let c = stack.pop();
-                if (
-                  c.x < 0 ||
-                  c.x >= COLS ||
-                  c.y < 0 ||
-                  c.y >= ROWS ||
-                  visited[c.y][c.x] ||
-                  board[c.y][c.x] !== color
-                )
-                  continue;
-                visited[c.y][c.x] = true;
-                group.push(c);
-                stack.push(
-                  { x: c.x + 1, y: c.y },
-                  { x: c.x - 1, y: c.y },
-                  { x: c.x, y: c.y + 1 },
-                  { x: c.x, y: c.y - 1 },
-                );
-              }
-              if (group.length >= 4) {
-                matchedCells.push(...group);
-                colorsFound.add(color);
-              }
-            }
+        let matchedCells = [], colorsFound = new Set(), visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+        for (let y = 0; y < ROWS; y++) { for (let x = 0; x < COLS; x++) { if (board[y][x] && !visited[y][x]) {
+          let group = [], color = board[y][x], stack = [{ x, y }];
+          while (stack.length) {
+            let c = stack.pop();
+            if (c.x < 0 || c.x >= COLS || c.y < 0 || c.y >= ROWS || visited[c.y][c.x] || board[c.y][c.x] !== color) continue;
+            visited[c.y][c.x] = true; group.push(c);
+            stack.push({ x: c.x + 1, y: c.y }, { x: c.x - 1, y: c.y }, { x: c.x, y: c.y + 1 }, { x: c.x, y: c.y - 1 });
           }
-        }
+          if (group.length >= 4) { matchedCells.push(...group); colorsFound.add(color); }
+        } } }
         return { cells: matchedCells, colorsFound: Array.from(colorsFound) };
       }
 
-      function saveScore(s) {
-        if (!playerPass) return;
-        let data = JSON.parse(
-          localStorage.getItem("puyoData") || '{"scores":[]}',
-        );
-        const userIndex = data.scores.findIndex((u) => u.pass === playerPass);
-        if (userIndex !== -1) {
-          data.scores[userIndex].name = playerName;
-          if (s > data.scores[userIndex].score)
-            data.scores[userIndex].score = s;
-        } else {
-          data.scores.push({ name: playerName, pass: playerPass, score: s });
-        }
-        localStorage.setItem("puyoData", JSON.stringify(data));
-      }
+      function saveScore(s) { if (!playerPass) return; let data = JSON.parse(localStorage.getItem("puyoData") || '{"scores":[]}'); const userIndex = data.scores.findIndex((u) => u.pass === playerPass); if (userIndex !== -1) { data.scores[userIndex].name = playerName; if (s > data.scores[userIndex].score) data.scores[userIndex].score = s; } else { data.scores.push({ name: playerName, pass: playerPass, score: s }); } localStorage.setItem("puyoData", JSON.stringify(data)); }
       function showRanking() {
-        const data = JSON.parse(
-          localStorage.getItem("puyoData") || '{"scores":[]}',
-        );
-        let list = [...data.scores]
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 10);
+        const data = JSON.parse(localStorage.getItem("puyoData") || '{"scores":[]}');
+        let list = [...data.scores].sort((a, b) => b.score - a.score).slice(0, 10);
         let html = "<table><tr><th>#</th><th>Name</th><th>Score</th></tr>";
-        list.forEach((s, i) => {
-          const isCurrent = s.pass === playerPass;
-          html += `<tr class="${isCurrent ? "highlight" : ""}"><td>${i + 1}</td><td>${s.name}</td><td>${s.score}</td></tr>`;
-        });
+        list.forEach((s, i) => { const isCurrent = s.pass === playerPass; html += `<tr class="${isCurrent ? "highlight" : ""}"><td>${i + 1}</td><td>${s.name}</td><td>${s.score}</td></tr>`; });
         document.getElementById("rank-list").innerHTML = html + "</table>";
-        overlay.classList.remove("hidden");
-        rankModal.classList.remove("hidden");
-        startModal.classList.add("hidden");
+        overlay.classList.remove("hidden"); rankModal.classList.remove("hidden"); startModal.classList.add("hidden");
       }
 
       document.getElementById("startBtn").onclick = () => {
         playerName = document.getElementById("nickname").value.trim();
         playerPass = document.getElementById("userPass").value.trim();
-        if (!playerName || !playerPass) return;
-        overlay.classList.add("hidden");
-        gameRunning = true;
-        resetGame();
-        gameLoop();
+        if (!playerName || !playerPass) { alert("入力してください"); return; }
+        overlay.classList.add("hidden"); gameRunning = true; resetGame(); gameLoop();
       };
 
+      // ボタン操作登録
       const addPress = (id, fn) => {
         const el = document.getElementById(id);
-        el.addEventListener("pointerdown", (e) => {
-          e.preventDefault();
-          if (gameRunning && !isPaused && !isProcessing) {
-            fn();
-            draw();
-          }
-        });
+        el.addEventListener("pointerdown", (e) => { e.preventDefault(); if (gameRunning && !isPaused && !isProcessing) { fn(); draw(); } });
       };
       addPress("m-left", () => move(-1, 0));
       addPress("m-right", () => move(1, 0));
       addPress("m-rotate", () => rotate());
-      addPress("m-down", () => {
-        while (move(0, 1));
-      });
+      addPress("m-down", () => { while (move(0, 1)); });
 
       document.getElementById("showRankBtn").onclick = showRanking;
-      document.getElementById("backBtn").onclick = () =>
-        overlay.classList.add("hidden");
-      document.getElementById("pauseBtn").onclick = () => {
-        isPaused = !isPaused;
-        draw();
-      };
+      document.getElementById("backBtn").onclick = () => overlay.classList.add("hidden");
+      document.getElementById("pauseBtn").onclick = () => { isPaused = !isPaused; draw(); };
       document.getElementById("resetBtn").onclick = () => location.reload();
 
-      function resetGame() {
-        board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        score = 0;
-        scoreElement.innerText = "0";
-        activePuyo = null;
-      }
+      function resetGame() { board = Array.from({ length: ROWS }, () => Array(COLS).fill(0)); score = 0; scoreElement.innerText = "0"; activePuyo = null; }
+
+      window.addEventListener("keydown", (e) => {
+        if (!gameRunning || isPaused || isProcessing) return;
+        if (e.key === "ArrowLeft") move(-1, 0);
+        if (e.key === "ArrowRight") move(1, 0);
+        if (e.key === "ArrowDown") move(0, 1);
+        if (e.key === "ArrowUp") rotate();
+        if (e.key === " ") while (move(0, 1));
+        draw();
+      });
+
       draw();
     </script>
   </body>
