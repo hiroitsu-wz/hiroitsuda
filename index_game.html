@@ -6,9 +6,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>PUYOichi MINI - Canvas Edition</title>
+    <title>PUYOichi PRO - Standard</title>
     <style>
-      /* 1. スマホの画面固定とレイアウト調整 */
       html,
       body {
         width: 100%;
@@ -24,11 +23,8 @@
         font-family: "Segoe UI", sans-serif;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start;
         align-items: center;
       }
-
-      /* 装飾用の背景 */
       .moon {
         position: absolute;
         width: 400px;
@@ -36,15 +32,13 @@
         filter: blur(60px);
         z-index: -1;
         opacity: 0.2;
+        border-radius: 50%;
       }
       .moon-upper {
         top: -50px;
         right: -100px;
         background: linear-gradient(to bottom, #38bdf8, #818cf8);
-        border-radius: 50%;
       }
-
-      /* ヘッダーエリア */
       .header-area {
         display: flex;
         justify-content: space-between;
@@ -53,17 +47,12 @@
         margin-top: 10px;
         z-index: 10;
       }
-      h1 {
-        font-size: 18px;
-        margin: 0;
-      }
       .info {
         font-size: 20px;
         font-weight: 800;
         color: #38bdf8;
       }
 
-      /* ログイン・ランキング画面 */
       #overlay {
         position: absolute;
         top: 0;
@@ -96,29 +85,58 @@
         border-radius: 8px;
       }
 
-      /* ゲーム画面 */
+      /* スタートボタン専用のスタイル */
+      .big-btn {
+        margin-top: 15px;
+        width: 100%;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .big-btn:active {
+        background: #2563eb;
+        transform: scale(0.98);
+      }
+
+      .game-container {
+        position: relative;
+        display: flex;
+        gap: 10px;
+        margin-top: 5px;
+      }
       canvas {
         background: rgba(30, 41, 59, 0.95);
         border: 3px solid #475569;
         border-radius: 12px;
-        max-height: 48vh;
-        max-width: 90vw;
-        height: auto;
-        margin-top: 5px;
+        max-height: 50vh;
+        width: auto;
+      }
+      #next-canvas {
+        background: rgba(30, 41, 59, 0.5);
+        border: 2px solid #475569;
+        border-radius: 8px;
+        align-self: flex-start;
       }
 
       #chain-msg {
         position: absolute;
         top: 15%;
+        left: 50%;
+        transform: translateX(-50%);
         color: #facc15;
         font-size: 32px;
         font-weight: 900;
         pointer-events: none;
         text-shadow: 2px 2px 0 #000;
         z-index: 50;
+        text-align: center;
       }
 
-      /* コントローラー */
       .controller {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -133,10 +151,9 @@
         border-radius: 12px;
         color: white;
         font-size: 24px;
-        padding: 12px 0;
+        padding: 15px 0;
         touch-action: none;
         user-select: none;
-        -webkit-user-select: none;
       }
       .ctrl-btn:active {
         background: #475569;
@@ -166,7 +183,6 @@
         color: white;
         background: #475569;
       }
-
       .hidden {
         display: none !important;
       }
@@ -191,7 +207,7 @@
     <div class="moon moon-upper"></div>
 
     <div id="overlay">
-      <div id="start-modal" class="modal">
+      <div id="login-modal" class="modal">
         <h2 style="margin: 0 0 10px 0">Login</h2>
         <input
           type="text"
@@ -205,36 +221,22 @@
           placeholder="合言葉"
           maxlength="10"
         />
-        <button
-          id="startBtn"
-          style="
-            margin-top: 15px;
-            width: 100%;
-            background: #3b82f6;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: bold;
-          "
-        >
-          GAME START
-        </button>
+        <button id="loginBtn" class="big-btn">LOGIN</button>
       </div>
+
+      <div id="start-modal" class="modal hidden">
+        <h2 style="margin: 0 0 5px 0">READY?</h2>
+        <p id="player-display" style="color: #38bdf8; margin-bottom: 15px"></p>
+        <button id="playBtn" class="big-btn">GAME START</button>
+      </div>
+
       <div id="rank-modal" class="modal hidden">
         <h2 style="margin: 0 0 10px 0">Rankings</h2>
         <div id="rank-list"></div>
         <button
           id="backBtn"
-          style="
-            margin-top: 15px;
-            width: 100%;
-            background: #475569;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 8px;
-          "
+          class="big-btn"
+          style="background: #475569; font-size: 14px"
         >
           CLOSE
         </button>
@@ -242,12 +244,20 @@
     </div>
 
     <div class="header-area">
-      <h1>PUYOichi MINI</h1>
+      <h1>PUYOichi PRO</h1>
       <div class="info">SCORE: <span id="score">0</span></div>
     </div>
 
     <div id="chain-msg"></div>
-    <canvas id="game" width="240" height="480"></canvas>
+    <div class="game-container">
+      <canvas id="game" width="240" height="480"></canvas>
+      <div style="display: flex; flex-direction: column; align-items: center">
+        <span style="font-size: 10px; margin-bottom: 2px; font-weight: bold"
+          >NEXT</span
+        >
+        <canvas id="next-canvas" width="60" height="100"></canvas>
+      </div>
+    </div>
 
     <div class="controller">
       <button class="ctrl-btn" id="m-left">←</button>
@@ -269,9 +279,12 @@
     <script>
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
+      const nextCanvas = document.getElementById("next-canvas");
+      const nextCtx = nextCanvas.getContext("2d");
       const scoreElement = document.getElementById("score");
       const chainMsg = document.getElementById("chain-msg");
       const overlay = document.getElementById("overlay");
+      const loginModal = document.getElementById("login-modal");
       const startModal = document.getElementById("start-modal");
       const rankModal = document.getElementById("rank-modal");
 
@@ -280,28 +293,28 @@
         SIZE = 40;
       const COLORS = [
         null,
-        "#ef4444", // 赤
-        "#22c55e", // 緑
-        "#3b82f6", // 青
-        "#eab308", // 黄
-        "#a855f7", // 紫
+        "#ef4444",
+        "#22c55e",
+        "#3b82f6",
+        "#eab308",
+        "#a855f7",
       ];
-
-      // 音声ファイルは残していますが、画像ファイル(puyoImages)の読み込みを削除
-      let puyoSounds = [];
-      [1, 2, 3, 4, 5].forEach((i) => {
-        const snd = new Audio(`se${i}.mp3`);
-        puyoSounds[i] = snd;
-      });
 
       let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
       let score = 0,
         activePuyo = null,
-        isProcessing = false,
-        isPaused = false,
-        gameRunning = false;
+        nextPuyo = null,
+        isProcessing = false;
+      let isPaused = false,
+        gameRunning = false,
+        waitingForStart = true;
       let playerName = "",
         playerPass = "";
+
+      let lockTimer = 0;
+      const LOCK_DELAY = 35;
+      let fallCounter = 0;
+      const FALL_SPEED = 40;
 
       class PuyoPair {
         constructor() {
@@ -322,24 +335,16 @@
 
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // 1. ボード描画
         board.forEach((row, y) =>
           row.forEach((val, x) => {
-            if (val) drawUnit(x, y, val);
+            if (val) drawUnit(ctx, x, y, val, SIZE);
           }),
         );
-
-        // 2. ✕印描画
-        if (board[0][2] === 0) {
-          drawXMark(2, 0);
-        }
-
-        // 3. 操作中ぷよ描画
+        if (board[0][2] === 0) drawXMark(2, 0);
         if (activePuyo)
-          activePuyo.getPos().forEach((p) => drawUnit(p.x, p.y, p.c));
-
-        // 4. 一時停止画面
+          activePuyo
+            .getPos()
+            .forEach((p) => drawUnit(ctx, p.x, p.y, p.c, SIZE));
         if (isPaused) {
           ctx.fillStyle = "rgba(0,0,0,0.6)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -348,37 +353,39 @@
           ctx.textAlign = "center";
           ctx.fillText("PAUSED", canvas.width / 2, 240);
         }
+        drawNext();
       }
 
-      // ぷよをCanvasの図形で描画する関数
-      function drawUnit(x, y, colorIndex) {
-        const px = x * SIZE + SIZE / 2;
-        const py = y * SIZE + SIZE / 2;
+      function drawNext() {
+        nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+        if (nextPuyo) {
+          drawUnit(nextCtx, 0.25, 1.7, nextPuyo.c1, 25);
+          drawUnit(nextCtx, 0.25, 0.7, nextPuyo.c2, 25);
+        }
+      }
 
-        // 本体（影付きの円）
-        ctx.fillStyle = COLORS[colorIndex];
-        ctx.beginPath();
-        ctx.arc(px, py, 18, 0, Math.PI * 2);
-        ctx.fill();
-
-        // ハイライト（光沢感）
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        ctx.beginPath();
-        ctx.arc(px - 6, py - 6, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // ぷよっぽい「目」を簡易的に描画（ informaticsらしい遊び心 ）
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(px - 5, py, 4, 0, Math.PI * 2); // 左目
-        ctx.arc(px + 5, py, 4, 0, Math.PI * 2); // 右目
-        ctx.fill();
-
-        ctx.fillStyle = "black";
-        ctx.beginPath();
-        ctx.arc(px - 5, py, 2, 0, Math.PI * 2); // 左瞳
-        ctx.arc(px + 5, py, 2, 0, Math.PI * 2); // 右瞳
-        ctx.fill();
+      function drawUnit(targetCtx, x, y, colorIndex, size) {
+        const px = x * size + size / 2;
+        const py = y * size + size / 2;
+        const r = size * 0.45;
+        targetCtx.fillStyle = COLORS[colorIndex];
+        targetCtx.beginPath();
+        targetCtx.arc(px, py, r, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = "rgba(255,255,255,0.4)";
+        targetCtx.beginPath();
+        targetCtx.arc(px - r / 3, py - r / 3, r / 4, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = "white";
+        targetCtx.beginPath();
+        targetCtx.arc(px - r / 3, py, r / 4, 0, Math.PI * 2);
+        targetCtx.arc(px + r / 3, py, r / 4, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = "black";
+        targetCtx.beginPath();
+        targetCtx.arc(px - r / 3, py, r / 8, 0, Math.PI * 2);
+        targetCtx.arc(px + r / 3, py, r / 8, 0, Math.PI * 2);
+        targetCtx.fill();
       }
 
       function drawXMark(x, y) {
@@ -395,21 +402,34 @@
       }
 
       async function gameLoop() {
-        if (!gameRunning) return;
+        if (!gameRunning || waitingForStart) return;
+
         if (!isProcessing && !isPaused) {
           if (!activePuyo) {
-            activePuyo = new PuyoPair();
+            activePuyo = nextPuyo || new PuyoPair();
+            nextPuyo = new PuyoPair();
             if (checkCollision(activePuyo)) {
+              gameRunning = false;
               saveScore(score);
               alert(`GAME OVER!\nScore: ${score}`);
-              gameRunning = false;
               showRanking();
               return;
             }
+          }
+          fallCounter++;
+          const canMoveDown = canMove(activePuyo, 0, 1);
+          if (canMoveDown) {
+            lockTimer = 0;
+            if (fallCounter >= FALL_SPEED) {
+              activePuyo.y++;
+              fallCounter = 0;
+            }
           } else {
-            if (!move(0, 1)) {
+            lockTimer++;
+            if (lockTimer >= LOCK_DELAY) {
               lockPuyo();
               activePuyo = null;
+              lockTimer = 0;
               isProcessing = true;
               await handleChain();
               isProcessing = false;
@@ -417,53 +437,68 @@
           }
         }
         draw();
-        setTimeout(gameLoop, isProcessing ? 50 : 500);
+        requestAnimationFrame(gameLoop);
       }
 
       async function handleChain() {
         let chainCount = 0;
         while (true) {
-          applyGravity();
-          draw();
-          await new Promise((r) => setTimeout(r, 200));
-          const matches = findMatchesAndColors();
-          if (matches.cells.length === 0) {
-            const isAllClear = board.every((row) =>
-              row.every((cell) => cell === 0),
-            );
-            if (isAllClear && chainCount > 0) {
-              score += 20;
+          await applyGravityAnimated();
+          const matches = findMatches();
+          if (matches.length === 0) {
+            if (
+              board.every((row) => row.every((cell) => cell === 0)) &&
+              chainCount > 0
+            ) {
+              score += 2100;
               scoreElement.innerText = score;
               showChainMsg("ALL CLEAR!");
             }
             break;
           }
           chainCount++;
-          matches.colorsFound.forEach((c) => {
-            if (puyoSounds[c]) {
-              const s = puyoSounds[c].cloneNode();
-              s.play().catch(() => {});
-            }
-          });
-          score +=
-            matches.cells.length * 10 +
-            (chainCount > 1 ? (chainCount - 1) * 15 : 0);
+          score += matches.length * 10 * chainCount;
           scoreElement.innerText = score;
           showChainMsg(chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!");
-          matches.cells.forEach((p) => (board[p.y][p.x] = 0));
+          matches.forEach((p) => (board[p.y][p.x] = 0));
           draw();
           await new Promise((r) => setTimeout(r, 300));
         }
       }
 
-      function showChainMsg(txt) {
-        chainMsg.innerText = txt;
-        setTimeout(() => {
-          if (chainMsg.innerText === txt) chainMsg.innerText = "";
-        }, 1000);
+      async function applyGravityAnimated() {
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (let x = 0; x < COLS; x++) {
+            for (let y = ROWS - 2; y >= 0; y--) {
+              if (board[y][x] !== 0 && board[y + 1][x] === 0) {
+                board[y + 1][x] = board[y][x];
+                board[y][x] = 0;
+                changed = true;
+              }
+            }
+          }
+          if (changed) {
+            draw();
+            await new Promise((r) => setTimeout(r, 50));
+          }
+        }
       }
+
+      function canMove(puyo, dx, dy) {
+        const testPuyo = {
+          x: puyo.x + dx,
+          y: puyo.y + dy,
+          rot: puyo.rot,
+          getPos: puyo.getPos,
+        };
+        return !checkCollision(testPuyo);
+      }
+
       function move(dx, dy) {
-        if (!activePuyo) return false;
+        if (!activePuyo || isProcessing || isPaused || waitingForStart)
+          return false;
         activePuyo.x += dx;
         activePuyo.y += dy;
         if (checkCollision(activePuyo)) {
@@ -471,14 +506,28 @@
           activePuyo.y -= dy;
           return false;
         }
+        if (dy === 0) lockTimer = 0;
         return true;
       }
+
       function rotate() {
-        if (!activePuyo) return;
-        const old = activePuyo.rot;
+        if (!activePuyo || isProcessing || isPaused || waitingForStart) return;
+        const oldRot = activePuyo.rot;
         activePuyo.rot = (activePuyo.rot + 1) % 4;
-        if (checkCollision(activePuyo)) activePuyo.rot = old;
+        if (checkCollision(activePuyo)) {
+          activePuyo.x++;
+          if (checkCollision(activePuyo)) {
+            activePuyo.x -= 2;
+            if (checkCollision(activePuyo)) {
+              activePuyo.x++;
+              activePuyo.rot = oldRot;
+              return;
+            }
+          }
+        }
+        lockTimer = 0;
       }
+
       function checkCollision(p) {
         return p
           .getPos()
@@ -487,35 +536,24 @@
               pos.x < 0 ||
               pos.x >= COLS ||
               pos.y >= ROWS ||
-              (pos.y >= 0 && board[pos.y][pos.x]),
+              (pos.y >= 0 && board[pos.y][pos.x] !== 0),
           );
       }
+
       function lockPuyo() {
         activePuyo.getPos().forEach((p) => {
           if (p.y >= 0) board[p.y][p.x] = p.c;
         });
       }
-      function applyGravity() {
-        for (let x = 0; x < COLS; x++) {
-          for (let y = ROWS - 1; y >= 0; y--) {
-            if (board[y][x]) {
-              let ty = y;
-              while (ty + 1 < ROWS && board[ty + 1][x] === 0) {
-                board[ty + 1][x] = board[ty][x];
-                board[ty][x] = 0;
-                ty++;
-              }
-            }
-          }
-        }
-      }
-      function findMatchesAndColors() {
-        let matchedCells = [],
-          colorsFound = new Set(),
-          visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+
+      function findMatches() {
+        let matchedCells = [];
+        let visited = Array.from({ length: ROWS }, () =>
+          Array(COLS).fill(false),
+        );
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
-            if (board[y][x] && !visited[y][x]) {
+            if (board[y][x] !== 0 && !visited[y][x]) {
               let group = [],
                 color = board[y][x],
                 stack = [{ x, y }];
@@ -539,15 +577,52 @@
                   { x: c.x, y: c.y - 1 },
                 );
               }
-              if (group.length >= 4) {
-                matchedCells.push(...group);
-                colorsFound.add(color);
-              }
+              if (group.length >= 4) matchedCells.push(...group);
             }
           }
         }
-        return { cells: matchedCells, colorsFound: Array.from(colorsFound) };
+        return matchedCells;
       }
+
+      let moveRepeatTimer = null;
+      function startMove(dx, dy) {
+        if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
+        move(dx, dy);
+        draw();
+        clearInterval(moveRepeatTimer);
+        moveRepeatTimer = setInterval(() => {
+          move(dx, dy);
+          draw();
+        }, 120);
+      }
+      function stopMove() {
+        clearInterval(moveRepeatTimer);
+      }
+
+      const addLongPress = (id, action) => {
+        const el = document.getElementById(id);
+        el.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          action();
+        });
+        el.addEventListener("pointerup", stopMove);
+        el.addEventListener("pointerleave", stopMove);
+      };
+
+      addLongPress("m-left", () => startMove(-1, 0));
+      addLongPress("m-right", () => startMove(1, 0));
+      document.getElementById("m-rotate").onclick = () => {
+        rotate();
+        draw();
+      };
+      document.getElementById("m-down").onclick = () => {
+        if (!isProcessing && !isPaused && activePuyo) {
+          while (canMove(activePuyo, 0, 1)) {
+            activePuyo.y++;
+          }
+          lockTimer = LOCK_DELAY;
+        }
+      };
 
       function saveScore(s) {
         if (!playerPass) return;
@@ -564,6 +639,7 @@
         }
         localStorage.setItem("puyoData", JSON.stringify(data));
       }
+
       function showRanking() {
         const data = JSON.parse(
           localStorage.getItem("puyoData") || '{"scores":[]}',
@@ -573,68 +649,90 @@
           .slice(0, 10);
         let html = "<table><tr><th>#</th><th>Name</th><th>Score</th></tr>";
         list.forEach((s, i) => {
-          const isCurrent = s.pass === playerPass;
-          html += `<tr class="${isCurrent ? "highlight" : ""}"><td>${i + 1}</td><td>${s.name}</td><td>${s.score}</td></tr>`;
+          html += `<tr class="${s.pass === playerPass ? "highlight" : ""}"><td>${i + 1}</td><td>${s.name}</td><td>${s.score}</td></tr>`;
         });
         document.getElementById("rank-list").innerHTML = html + "</table>";
         overlay.classList.remove("hidden");
-        rankModal.classList.remove("hidden");
+        loginModal.classList.add("hidden");
         startModal.classList.add("hidden");
+        rankModal.classList.remove("hidden");
       }
 
-      document.getElementById("startBtn").onclick = () => {
+      function showChainMsg(txt) {
+        chainMsg.innerText = txt;
+        setTimeout(() => {
+          if (chainMsg.innerText === txt) chainMsg.innerText = "";
+        }, 1000);
+      }
+
+      // ログイン処理
+      document.getElementById("loginBtn").onclick = () => {
         playerName = document.getElementById("nickname").value.trim();
         playerPass = document.getElementById("userPass").value.trim();
-        if (!playerName || !playerPass) {
-          alert("入力してください");
-          return;
-        }
-        overlay.classList.add("hidden");
-        gameRunning = true;
-        resetGame();
-        gameLoop();
+        if (!playerName || !playerPass) return alert("入力してください");
+        document.getElementById("player-display").innerText =
+          `PLAYER: ${playerName}`;
+        showStartScreen();
       };
 
-      const addPress = (id, fn) => {
-        const el = document.getElementById(id);
-        el.addEventListener("pointerdown", (e) => {
-          e.preventDefault();
-          if (gameRunning && !isPaused && !isProcessing) {
-            fn();
-            draw();
-          }
-        });
+      // スタート画面の表示
+      function showStartScreen() {
+        overlay.classList.remove("hidden");
+        loginModal.classList.add("hidden");
+        rankModal.classList.add("hidden");
+        startModal.classList.remove("hidden");
+        waitingForStart = true;
+      }
+
+      // ゲーム開始ボタンの処理
+      document.getElementById("playBtn").onclick = () => {
+        overlay.classList.add("hidden");
+        startModal.classList.add("hidden");
+        waitingForStart = false;
+        gameRunning = true;
+        gameLoop(); // ループ開始
       };
-      addPress("m-left", () => move(-1, 0));
-      addPress("m-right", () => move(1, 0));
-      addPress("m-rotate", () => rotate());
-      addPress("m-down", () => {
-        while (move(0, 1));
-      });
 
       document.getElementById("showRankBtn").onclick = showRanking;
-      document.getElementById("backBtn").onclick = () =>
-        overlay.classList.add("hidden");
+      document.getElementById("backBtn").onclick = () => showStartScreen();
       document.getElementById("pauseBtn").onclick = () => {
         isPaused = !isPaused;
         draw();
       };
-      document.getElementById("resetBtn").onclick = () => location.reload();
+
+      // リセットボタン：ログインは保持してスタート画面に戻る
+      document.getElementById("resetBtn").onclick = () => {
+        resetGame();
+        showStartScreen();
+        draw();
+      };
 
       function resetGame() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         score = 0;
         scoreElement.innerText = "0";
         activePuyo = null;
+        nextPuyo = new PuyoPair();
+        gameRunning = false;
+        isProcessing = false;
+        isPaused = false;
+        chainMsg.innerText = "";
       }
 
       window.addEventListener("keydown", (e) => {
-        if (!gameRunning || isPaused || isProcessing) return;
+        if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
         if (e.key === "ArrowLeft") move(-1, 0);
         if (e.key === "ArrowRight") move(1, 0);
         if (e.key === "ArrowDown") move(0, 1);
         if (e.key === "ArrowUp") rotate();
-        if (e.key === " ") while (move(0, 1));
+        if (e.key === " ") {
+          if (activePuyo) {
+            while (canMove(activePuyo, 0, 1)) {
+              activePuyo.y++;
+            }
+            lockTimer = LOCK_DELAY;
+          }
+        }
         draw();
       });
 
