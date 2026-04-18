@@ -404,7 +404,12 @@
             nextPuyo = new PuyoPair();
             if (checkCollision(activePuyo)) {
               gameRunning = false;
+
+              // --- ここを追加！ ---
               saveScore(score);
+              sendScore(playerName, score, "Tani版ぷよぷよ"); // サーバーに送信！
+              // ------------------
+
               alert(`GAME OVER!\nScore: ${score}`);
               resetGame();
               showRanking();
@@ -751,13 +756,29 @@
         isPaused = !isPaused;
         draw();
       };
-      document.getElementById("resetBtn").onclick = () => {
-        resetGame();
-        showStartScreen();
-      };
+      // アップデート版：ゲーム名も送れるようにする
+      function sendScore(playerName, playerScore, gameName) {
+        fetch("http://localhost:3000/api/score", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          // ここに gameName を追加！
+          body: JSON.stringify({
+            name: playerName,
+            score: playerScore,
+            game: gameName,
+          }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("保存成功！");
+          })
+          .catch((error) => console.error("エラー:", error));
+      }
 
+      // サーバーへスコアを送信する
       initApp();
-      draw();
     </script>
   </body>
 </html>
