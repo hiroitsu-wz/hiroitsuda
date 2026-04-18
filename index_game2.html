@@ -6,8 +6,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>MARUMARU MINI Tani版 - Image Enhanced</title>
+    <title>PUYOichi - Photo Edition</title>
     <style>
+      /* --- スタイルは元の究極版を完全継承 --- */
       html,
       body {
         width: 100%;
@@ -129,6 +130,7 @@
         text-shadow: 2px 2px 0 #000;
         z-index: 50;
         text-align: center;
+        white-space: pre-wrap;
       }
       .controller {
         display: grid;
@@ -170,6 +172,7 @@
         border: none;
         color: white;
         background: #475569;
+        cursor: pointer;
       }
       .hidden {
         display: none !important;
@@ -194,6 +197,9 @@
   <body>
     <div class="moon"></div>
     <div id="overlay">
+      <div id="loading-modal" class="modal">
+        <h2 id="load-status">Loading Photos...</h2>
+      </div>
       <div id="login-modal" class="modal hidden">
         <h2 style="margin: 0 0 10px 0">Set Name</h2>
         <input
@@ -209,13 +215,6 @@
         <p id="player-display" style="color: #38bdf8; margin-bottom: 15px"></p>
         <button id="playBtn" class="big-btn">GAME START</button>
         <button id="startRankBtn" class="big-btn sub-btn">RANKING</button>
-        <button
-          id="changeNameBtn"
-          class="big-btn sub-btn"
-          style="background: transparent; color: #94a3b8"
-        >
-          Change Name
-        </button>
       </div>
       <div id="rank-modal" class="modal hidden">
         <h2 style="margin: 0 0 10px 0">Personal Bests</h2>
@@ -236,7 +235,7 @@
         <span style="font-size: 10px; margin-bottom: 2px; font-weight: bold"
           >NEXT</span
         >
-        <canvas id="next-canvas" width="60" height="100"></canvas>
+        <canvas id="next-canvas" width="60" height="150"></canvas>
       </div>
     </div>
 
@@ -255,6 +254,28 @@
     </div>
 
     <script>
+      // --- 写真読み込み設定 ---
+      const puyoImages = [];
+      let loadedImages = 0;
+      const totalToLoad = 5;
+
+      // puyo1.png 〜 puyo5.png をロード
+      for (let i = 1; i <= 5; i++) {
+        const img = new Image();
+        img.src = `puyo${i}.png`; // ローカルの画像ファイルを参照
+        img.onload = () => {
+          loadedImages++;
+          if (loadedImages === totalToLoad) {
+            checkUserAndInit();
+          }
+        };
+        img.onerror = () => {
+          document.getElementById("load-status").innerHTML =
+            `<span style="color:#ef4444">Error: puyo${i}.png not found!</span>`;
+        };
+        puyoImages[i] = img;
+      }
+
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const nextCanvas = document.getElementById("next-canvas");
@@ -262,49 +283,41 @@
       const scoreElement = document.getElementById("score");
       const chainMsg = document.getElementById("chain-msg");
       const overlay = document.getElementById("overlay");
-      const loginModal = document.getElementById("login-modal");
-      const startModal = document.getElementById("start-modal");
-      const rankModal = document.getElementById("rank-modal");
 
       const ROWS = 12,
         COLS = 6,
         SIZE = 40;
-      const COLORS = [
-        null,
-        "#ef4444",
-        "#22c55e",
-        "#3b82f6",
-        "#eab308",
-        "#a855f7",
-      ];
 
-      // --- 画像と音声のロード (コード1から) ---
-      let puyoImages = [],
-        puyoSounds = [];
-      [1, 2, 3, 4, 5].forEach((i) => {
-        const img = new Image();
-        img.src = `puyo${i}.png`;
-        puyoImages[i] = img;
-        const snd = new Audio(`se${i}.mp3`);
-        puyoSounds[i] = snd;
-      });
+      // --- 描画関数（ここが写真対応） ---
+      function drawUnit(targetCtx, x, y, colorIndex, size) {
+        const px = x * size;
+        const py = y * size;
 
-      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-      let score = 0,
-        activePuyo = null,
-        nextPuyo = null,
-        isProcessing = false;
-      let isPaused = false,
-        gameRunning = false,
-        waitingForStart = true;
-      let playerName = "",
-        playerID = "";
+        targetCtx.save();
+        // 丸く切り抜く
+        targetCtx.beginPath();
+        targetCtx.arc(
+          px + size / 2,
+          py + size / 2,
+          size * 0.45,
+          0,
+          Math.PI * 2,
+        );
+        targetCtx.clip();
 
-      let lockTimer = 0;
-      const LOCK_DELAY = 35;
-      let fallCounter = 0;
-      const FALL_SPEED = 40;
+        // 画像を描画
+        if (puyoImages[colorIndex]) {
+          targetCtx.drawImage(puyoImages[colorIndex], px, py, size, size);
+        }
 
+        // 縁取り（白）
+        targetCtx.strokeStyle = "rgba(255,255,255,0.5)";
+        targetCtx.lineWidth = 2;
+        targetCtx.stroke();
+        targetCtx.restore();
+      }
+
+      // 既存のロジック（そのまま）
       class PuyoPair {
         constructor() {
           this.x = 2;
@@ -322,6 +335,21 @@
         }
       }
 
+      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      let score = 0,
+        activePuyo = null,
+        isProcessing = false,
+        isPaused = false,
+        gameRunning = false,
+        waitingForStart = true;
+      let playerName = "",
+        playerID = "";
+      let nextPuyos = [new PuyoPair(), new PuyoPair()];
+      let lockTimer = 0;
+      const LOCK_DELAY = 35;
+      let fallCounter = 0;
+      const FALL_SPEED = 40;
+
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         board.forEach((row, y) =>
@@ -329,9 +357,7 @@
             if (val) drawUnit(ctx, x, y, val, SIZE);
           }),
         );
-        // 出現ポイントの✕印
         if (board[0][2] === 0) drawXMark(2, 0);
-
         if (activePuyo)
           activePuyo
             .getPos()
@@ -349,77 +375,48 @@
 
       function drawNext() {
         nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-        if (nextPuyo) {
-          drawUnit(nextCtx, 0.4, 1.7, nextPuyo.c1, 28);
-          drawUnit(nextCtx, 0.4, 0.5, nextPuyo.c2, 28);
-        }
-      }
-
-      // --- 描画関数 (画像対応版に差し替え) ---
-      function drawUnit(targetCtx, x, y, colorIndex, size) {
-        const img = puyoImages[colorIndex];
-        if (img && img.complete && img.naturalWidth !== 0) {
-          // 画像が読み込まれていれば描画
-          targetCtx.drawImage(
-            img,
-            x * size + 1,
-            y * size + 1,
-            size - 2,
-            size - 2,
-          );
-        } else {
-          // 画像がない場合のフォールバック（コード2の描画）
-          const px = x * size + size / 2,
-            py = y * size + size / 2,
-            r = size * 0.45;
-          targetCtx.fillStyle = COLORS[colorIndex];
-          targetCtx.beginPath();
-          targetCtx.arc(px, py, r, 0, Math.PI * 2);
-          targetCtx.fill();
-        }
+        drawUnit(nextCtx, 0.25, 0.5, nextPuyos[0].c1, 25);
+        drawUnit(nextCtx, 0.25, 1.5, nextPuyos[0].c2, 25);
+        drawUnit(nextCtx, 0.4, 3.5, nextPuyos[1].c1, 18);
+        drawUnit(nextCtx, 0.4, 4.3, nextPuyos[1].c2, 18);
       }
 
       function drawXMark(x, y) {
         const m = 12;
-        ctx.save();
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 4;
         ctx.lineCap = "round";
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "#ef4444";
         ctx.beginPath();
         ctx.moveTo(x * SIZE + m, y * SIZE + m);
         ctx.lineTo(x * SIZE + SIZE - m, y * SIZE + SIZE - m);
         ctx.moveTo(x * SIZE + SIZE - m, y * SIZE + m);
         ctx.lineTo(x * SIZE + m, y * SIZE + SIZE - m);
         ctx.stroke();
-        ctx.restore();
       }
 
       async function gameLoop() {
         if (!gameRunning || waitingForStart) return;
         if (!isProcessing && !isPaused) {
           if (!activePuyo) {
-            activePuyo = nextPuyo || new PuyoPair();
-            nextPuyo = new PuyoPair();
+            activePuyo = nextPuyos.shift();
+            nextPuyos.push(new PuyoPair());
             if (checkCollision(activePuyo)) {
               gameRunning = false;
-
-              // --- ここを追加！ ---
               saveScore(score);
-              sendScore(playerName, score, "Tani版ぷよぷよ"); // サーバーに送信！
-              // ------------------
-
               alert(`GAME OVER!\nScore: ${score}`);
               resetGame();
-              showRanking();
+              showStartScreen();
               return;
             }
           }
+          let dynamicSpeed = Math.max(
+            5,
+            FALL_SPEED - Math.floor(score / 1000) * 8,
+          );
           fallCounter++;
           if (canMove(activePuyo, 0, 1)) {
             lockTimer = 0;
-            if (fallCounter >= FALL_SPEED) {
+            if (fallCounter >= dynamicSpeed) {
               activePuyo.y++;
               fallCounter = 0;
             }
@@ -444,40 +441,23 @@
         while (true) {
           await applyGravityAnimated();
           const result = findMatches();
-          if (result.matches.length === 0) {
-            if (
-              board.every((row) => row.every((cell) => cell === 0)) &&
-              chainCount > 0
-            ) {
-              score += 100;
-              scoreElement.innerText = score;
-              showChainMsg("ALL CLEAR! +100");
-            }
-            break;
-          }
-
-          // 音声再生
-          result.colors.forEach((c) => {
-            if (puyoSounds[c]) {
-              const s = puyoSounds[c].cloneNode();
-              s.play().catch(() => {});
-            }
-          });
-
+          if (result.matches.length === 0) break;
           chainCount++;
-          const colorCount = result.colors.size;
-          const simultaneousBonus = colorCount > 1 ? (colorCount - 1) * 2 : 0;
           score +=
-            result.matches.length * 10 * (chainCount + simultaneousBonus);
+            result.matches.length *
+            10 *
+            (chainCount + (result.colors.size - 1) * 2);
           scoreElement.innerText = score;
-
-          let msg = chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!";
-          if (colorCount > 1) msg += `\nCOMBO x${colorCount}`;
-          showChainMsg(msg);
-
+          showChainMsg(chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!");
           result.matches.forEach((p) => (board[p.y][p.x] = 0));
           draw();
           await new Promise((r) => setTimeout(r, 400));
+        }
+        if (board.every((row) => row.every((cell) => cell === 0))) {
+          score += 2100;
+          scoreElement.innerText = score;
+          showChainMsg("ALL CLEAR!\n+2100");
+          await new Promise((r) => setTimeout(r, 800));
         }
       }
 
@@ -502,40 +482,28 @@
       }
 
       function canMove(puyo, dx, dy) {
-        const testPuyo = {
+        if (!puyo) return false;
+        const test = {
           x: puyo.x + dx,
           y: puyo.y + dy,
           rot: puyo.rot,
           getPos: puyo.getPos,
         };
-        return !checkCollision(testPuyo);
-      }
-
-      function move(dx, dy) {
-        if (!activePuyo || isProcessing || isPaused || waitingForStart)
-          return false;
-        activePuyo.x += dx;
-        activePuyo.y += dy;
-        if (checkCollision(activePuyo)) {
-          activePuyo.x -= dx;
-          activePuyo.y -= dy;
-          return false;
-        }
-        return true;
+        return !checkCollision(test);
       }
 
       function rotate() {
         if (!activePuyo || isProcessing || isPaused || waitingForStart) return;
         const oldRot = activePuyo.rot;
+        const oldX = activePuyo.x;
         activePuyo.rot = (activePuyo.rot + 1) % 4;
         if (checkCollision(activePuyo)) {
-          activePuyo.x++;
+          activePuyo.x += 1;
           if (checkCollision(activePuyo)) {
             activePuyo.x -= 2;
             if (checkCollision(activePuyo)) {
-              activePuyo.x++;
+              activePuyo.x = oldX;
               activePuyo.rot = oldRot;
-              return;
             }
           }
         }
@@ -600,56 +568,31 @@
         return { matches: matchedCells, colors: matchedColors };
       }
 
-      window.addEventListener("keydown", (e) => {
-        if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
-        if (e.key === "ArrowLeft") move(-1, 0);
-        if (e.key === "ArrowRight") move(1, 0);
-        if (e.key === "ArrowDown") move(0, 1);
-        if (e.key === "ArrowUp") rotate();
-        if (e.key === " ") {
-          if (activePuyo) {
-            while (canMove(activePuyo, 0, 1)) {
-              activePuyo.y++;
-            }
-            lockTimer = LOCK_DELAY;
-          }
+      // --- システムとUI ---
+      function checkUserAndInit() {
+        document.getElementById("loading-modal").classList.add("hidden");
+        let savedName = localStorage.getItem("puyoUserName");
+        let savedID = localStorage.getItem("puyoUserID") || "UID-" + Date.now();
+        localStorage.setItem("puyoUserID", savedID);
+        playerID = savedID;
+        if (savedName) {
+          playerName = savedName;
+          showStartScreen();
+        } else {
+          overlay.classList.remove("hidden");
+          document.getElementById("login-modal").classList.remove("hidden");
         }
-        draw();
-      });
-
-      let moveRepeatTimer = null;
-      function startMove(dx, dy) {
-        if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
-        move(dx, dy);
-        draw();
-        clearInterval(moveRepeatTimer);
-        moveRepeatTimer = setInterval(() => {
-          move(dx, dy);
-          draw();
-        }, 120);
       }
-      const addLongPress = (id, action) => {
-        const el = document.getElementById(id);
-        el.addEventListener("pointerdown", (e) => {
-          e.preventDefault();
-          action();
-        });
-        el.addEventListener("pointerup", () => clearInterval(moveRepeatTimer));
-      };
-      addLongPress("m-left", () => startMove(-1, 0));
-      addLongPress("m-right", () => startMove(1, 0));
-      document.getElementById("m-rotate").onclick = () => {
-        rotate();
-        draw();
-      };
-      document.getElementById("m-down").onclick = () => {
-        if (!isProcessing && !isPaused && activePuyo) {
-          while (canMove(activePuyo, 0, 1)) {
-            activePuyo.y++;
-          }
-          lockTimer = LOCK_DELAY;
-        }
-      };
+
+      function showStartScreen() {
+        document.getElementById("player-display").innerText =
+          `PLAYER: ${playerName}`;
+        overlay.classList.remove("hidden");
+        document.getElementById("login-modal").classList.add("hidden");
+        document.getElementById("rank-modal").classList.add("hidden");
+        document.getElementById("start-modal").classList.remove("hidden");
+        waitingForStart = true;
+      }
 
       function saveScore(s) {
         let data = JSON.parse(
@@ -672,15 +615,14 @@
         let sorted = data.users
           .sort((a, b) => b.highScore - a.highScore)
           .slice(0, 20);
-        let html = "<table><tr><th>#</th><th>Name</th><th>Best Score</th></tr>";
-        sorted.forEach((u, i) => {
-          const isMe = u.id === playerID;
-          html += `<tr class="${isMe ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`;
-        });
+        let html = "<table><tr><th>#</th><th>Name</th><th>Best</th></tr>";
+        sorted.forEach(
+          (u, i) =>
+            (html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`),
+        );
         document.getElementById("rank-list").innerHTML = html + "</table>";
-        startModal.classList.add("hidden");
-        rankModal.classList.remove("hidden");
-        overlay.classList.remove("hidden");
+        document.getElementById("start-modal").classList.add("hidden");
+        document.getElementById("rank-modal").classList.remove("hidden");
       }
 
       function resetGame() {
@@ -688,49 +630,12 @@
         score = 0;
         scoreElement.innerText = "0";
         activePuyo = null;
-        nextPuyo = new PuyoPair();
+        nextPuyos = [new PuyoPair(), new PuyoPair()];
         gameRunning = false;
         isProcessing = false;
         isPaused = false;
         chainMsg.innerText = "";
         draw();
-      }
-
-      function initApp() {
-        let savedName = localStorage.getItem("puyoUserName");
-        let savedID = localStorage.getItem("puyoUserID");
-        if (!savedID) {
-          savedID =
-            "UID-" + Date.now() + Math.random().toString(36).substr(2, 5);
-          localStorage.setItem("puyoUserID", savedID);
-        }
-        playerID = savedID;
-        if (savedName) {
-          playerName = savedName;
-          showStartScreen();
-        } else {
-          overlay.classList.remove("hidden");
-          loginModal.classList.remove("hidden");
-        }
-      }
-
-      document.getElementById("loginBtn").onclick = () => {
-        const val = document.getElementById("nickname").value.trim();
-        if (!val) return alert("名前を入力してください");
-        playerName = val;
-        localStorage.setItem("puyoUserName", val);
-        saveScore(0);
-        showStartScreen();
-      };
-
-      function showStartScreen() {
-        document.getElementById("player-display").innerText =
-          `PLAYER: ${playerName}`;
-        overlay.classList.remove("hidden");
-        loginModal.classList.add("hidden");
-        rankModal.classList.add("hidden");
-        startModal.classList.remove("hidden");
-        waitingForStart = true;
       }
 
       function showChainMsg(txt) {
@@ -740,45 +645,78 @@
         }, 1200);
       }
 
+      // コントロール
       document.getElementById("playBtn").onclick = () => {
         overlay.classList.add("hidden");
         waitingForStart = false;
         gameRunning = true;
         gameLoop();
       };
-      document.getElementById("changeNameBtn").onclick = () => {
-        loginModal.classList.remove("hidden");
-        startModal.classList.add("hidden");
+      document.getElementById("loginBtn").onclick = () => {
+        playerName = document.getElementById("nickname").value.trim();
+        if (playerName) {
+          localStorage.setItem("puyoUserName", playerName);
+          showStartScreen();
+        }
       };
-      document.getElementById("startRankBtn").onclick = showRanking;
-      document.getElementById("backBtn").onclick = showStartScreen;
       document.getElementById("pauseBtn").onclick = () => {
         isPaused = !isPaused;
         draw();
       };
-      // アップデート版：ゲーム名も送れるようにする
-      function sendScore(playerName, playerScore, gameName) {
-        fetch("http://localhost:3000/api/score", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          // ここに gameName を追加！
-          body: JSON.stringify({
-            name: playerName,
-            score: playerScore,
-            game: gameName,
-          }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            console.log("保存成功！");
-          })
-          .catch((error) => console.error("エラー:", error));
-      }
+      document.getElementById("resetBtn").onclick = () => {
+        if (confirm("リセットしますか？")) {
+          resetGame();
+          showStartScreen();
+        }
+      };
+      document.getElementById("startRankBtn").onclick = showRanking;
+      document.getElementById("backBtn").onclick = showStartScreen;
 
-      // サーバーへスコアを送信する
-      initApp();
+      // キー操作・フリック対応
+      window.addEventListener("keydown", (e) => {
+        if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
+        if (e.key === "ArrowLeft") {
+          activePuyo.x--;
+          if (checkCollision(activePuyo)) activePuyo.x++;
+        }
+        if (e.key === "ArrowRight") {
+          activePuyo.x++;
+          if (checkCollision(activePuyo)) activePuyo.x--;
+        }
+        if (e.key === "ArrowDown") {
+          activePuyo.y++;
+          if (checkCollision(activePuyo)) activePuyo.y--;
+        }
+        if (e.key === "ArrowUp") rotate();
+        if (e.key === " ") {
+          if (activePuyo) {
+            while (canMove(activePuyo, 0, 1)) activePuyo.y++;
+            lockTimer = LOCK_DELAY;
+          }
+        }
+        draw();
+      });
+
+      // UIボタン（長押し対応は簡易版に変更）
+      document.getElementById("m-left").onclick = () => {
+        if (canMove(activePuyo, -1, 0)) activePuyo.x--;
+        draw();
+      };
+      document.getElementById("m-right").onclick = () => {
+        if (canMove(activePuyo, 1, 0)) activePuyo.x++;
+        draw();
+      };
+      document.getElementById("m-rotate").onclick = () => {
+        rotate();
+        draw();
+      };
+      document.getElementById("m-down").onclick = () => {
+        if (activePuyo) {
+          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
+          lockTimer = LOCK_DELAY;
+          draw();
+        }
+      };
     </script>
   </body>
 </html>
