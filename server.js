@@ -16,17 +16,34 @@ app.get('/api/ranking', (req, res) => {
 
 // スコアを受け取る窓口
 app.post('/api/score', (req, res) => {
-    // game も受け取るように追加
-    const { name, score, game } = req.body; 
-    
-    // ランキングに保存（game名も一緒に保存する）
-    ranking.push({ name, score, game, date: new Date().toLocaleString() });
-    
-    // スコア順に並べ替え
-    ranking.sort((a, b) => b.score - a.score);
-    ranking = ranking.slice(0, 10); // 上位10人
+    const { name, score, game } = req.body;
+    const date = new Date().toLocaleString('ja-JP'); // 日本時間の日付
 
-    res.json({ message: "保存成功！" });
+    fs.readFile('ranking.json', 'utf8', (err, data) => {
+        let ranking = [];
+        if (!err && data) {
+            ranking = JSON.parse(data);
+        }
+
+        // 同じゲーム・同じ名前のデータがあるか探す
+        const existingIndex = ranking.findIndex(item => item.name === name && item.game === game);
+
+        if (existingIndex !== -1) {
+            // すでにデータがある場合：スコアが高ければ更新
+            if (score > ranking[existingIndex].score) {
+                ranking[existingIndex].score = score;
+                ranking[existingIndex].date = date; 
+            }
+        } else {
+            // 新規プレイヤーの場合
+            ranking.push({ name, score, game, date });
+        }
+
+        fs.writeFile('ranking.json', JSON.stringify(ranking, null, 2), (err) => {
+            if (err) return res.status(500).send('保存失敗');
+            res.json({ message: 'Success' });
+        });
+    });
 });
 
 app.listen(PORT, () => {
