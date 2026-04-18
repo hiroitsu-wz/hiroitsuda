@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>MARUMARU MINI - Global Edition</title>
+    <title>PUYOichi - Ultimate Edition</title>
     <style>
       html,
       body {
@@ -129,6 +129,7 @@
         text-shadow: 2px 2px 0 #000;
         z-index: 50;
         text-align: center;
+        white-space: pre-wrap;
       }
       .controller {
         display: grid;
@@ -170,6 +171,7 @@
         border: none;
         color: white;
         background: #475569;
+        cursor: pointer;
       }
       .hidden {
         display: none !important;
@@ -236,7 +238,7 @@
         <span style="font-size: 10px; margin-bottom: 2px; font-weight: bold"
           >NEXT</span
         >
-        <canvas id="next-canvas" width="60" height="100"></canvas>
+        <canvas id="next-canvas" width="60" height="150"></canvas>
       </div>
     </div>
 
@@ -278,22 +280,6 @@
         "#a855f7",
       ];
 
-      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-      let score = 0,
-        activePuyo = null,
-        nextPuyo = null,
-        isProcessing = false;
-      let isPaused = false,
-        gameRunning = false,
-        waitingForStart = true;
-      let playerName = "",
-        playerID = "";
-
-      let lockTimer = 0;
-      const LOCK_DELAY = 35;
-      let fallCounter = 0;
-      const FALL_SPEED = 40;
-
       class PuyoPair {
         constructor() {
           this.x = 2;
@@ -310,6 +296,21 @@
           return pos;
         }
       }
+
+      let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+      let score = 0,
+        activePuyo = null,
+        isProcessing = false;
+      let isPaused = false,
+        gameRunning = false,
+        waitingForStart = true;
+      let playerName = "",
+        playerID = "";
+      let nextPuyos = [new PuyoPair(), new PuyoPair()];
+      let lockTimer = 0;
+      const LOCK_DELAY = 35;
+      let fallCounter = 0;
+      const FALL_SPEED = 40;
 
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -336,9 +337,11 @@
 
       function drawNext() {
         nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-        if (nextPuyo) {
-          drawUnit(nextCtx, 0.25, 1.7, nextPuyo.c1, 25);
-          drawUnit(nextCtx, 0.25, 0.7, nextPuyo.c2, 25);
+        if (nextPuyos.length >= 2) {
+          drawUnit(nextCtx, 0.25, 0.5, nextPuyos[0].c1, 25);
+          drawUnit(nextCtx, 0.25, 1.5, nextPuyos[0].c2, 25);
+          drawUnit(nextCtx, 0.4, 3.5, nextPuyos[1].c1, 18);
+          drawUnit(nextCtx, 0.4, 4.3, nextPuyos[1].c2, 18);
         }
       }
 
@@ -383,8 +386,8 @@
         if (!gameRunning || waitingForStart) return;
         if (!isProcessing && !isPaused) {
           if (!activePuyo) {
-            activePuyo = nextPuyo || new PuyoPair();
-            nextPuyo = new PuyoPair();
+            activePuyo = nextPuyos.shift();
+            nextPuyos.push(new PuyoPair());
             if (checkCollision(activePuyo)) {
               gameRunning = false;
               saveScore(score);
@@ -394,10 +397,14 @@
               return;
             }
           }
+          let dynamicSpeed = Math.max(
+            5,
+            FALL_SPEED - Math.floor(score / 1000) * 8,
+          );
           fallCounter++;
           if (canMove(activePuyo, 0, 1)) {
             lockTimer = 0;
-            if (fallCounter >= FALL_SPEED) {
+            if (fallCounter >= dynamicSpeed) {
               activePuyo.y++;
               fallCounter = 0;
             }
@@ -422,31 +429,25 @@
         while (true) {
           await applyGravityAnimated();
           const result = findMatches();
-          if (result.matches.length === 0) {
-            if (
-              board.every((row) => row.every((cell) => cell === 0)) &&
-              chainCount > 0
-            ) {
-              score += 100; // 全消しボーナス
-              scoreElement.innerText = score;
-              showChainMsg("ALL CLEAR! +100");
-            }
-            break;
-          }
+          if (result.matches.length === 0) break;
+
           chainCount++;
           const colorCount = result.colors.size;
-          const simultaneousBonus = colorCount > 1 ? (colorCount - 1) * 2 : 0;
           score +=
-            result.matches.length * 10 * (chainCount + simultaneousBonus);
+            result.matches.length * 10 * (chainCount + (colorCount - 1) * 2);
           scoreElement.innerText = score;
 
-          let msg = chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!";
-          if (colorCount > 1) msg += `\nCOMBO x${colorCount}`;
-          showChainMsg(msg);
-
+          showChainMsg(chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!");
           result.matches.forEach((p) => (board[p.y][p.x] = 0));
           draw();
           await new Promise((r) => setTimeout(r, 400));
+        }
+        // 全消しボーナス
+        if (board.every((row) => row.every((cell) => cell === 0))) {
+          score += 2100;
+          scoreElement.innerText = score;
+          showChainMsg("ALL CLEAR!\n+2100");
+          await new Promise((r) => setTimeout(r, 800));
         }
       }
 
@@ -471,40 +472,30 @@
       }
 
       function canMove(puyo, dx, dy) {
-        const testPuyo = {
+        if (!puyo) return false;
+        const test = {
           x: puyo.x + dx,
           y: puyo.y + dy,
           rot: puyo.rot,
           getPos: puyo.getPos,
         };
-        return !checkCollision(testPuyo);
-      }
-
-      function move(dx, dy) {
-        if (!activePuyo || isProcessing || isPaused || waitingForStart)
-          return false;
-        activePuyo.x += dx;
-        activePuyo.y += dy;
-        if (checkCollision(activePuyo)) {
-          activePuyo.x -= dx;
-          activePuyo.y -= dy;
-          return false;
-        }
-        return true;
+        return !checkCollision(test);
       }
 
       function rotate() {
         if (!activePuyo || isProcessing || isPaused || waitingForStart) return;
         const oldRot = activePuyo.rot;
+        const oldX = activePuyo.x;
         activePuyo.rot = (activePuyo.rot + 1) % 4;
+
+        // 【強化】壁蹴りロジック：左右に余裕があれば自動でずらして回転
         if (checkCollision(activePuyo)) {
-          activePuyo.x++;
+          activePuyo.x += 1;
           if (checkCollision(activePuyo)) {
             activePuyo.x -= 2;
             if (checkCollision(activePuyo)) {
-              activePuyo.x++;
+              activePuyo.x = oldX;
               activePuyo.rot = oldRot;
-              return;
             }
           }
         }
@@ -521,6 +512,7 @@
               (pos.y >= 0 && board[pos.y][pos.x] !== 0),
           );
       }
+
       function lockPuyo() {
         activePuyo.getPos().forEach((p) => {
           if (p.y >= 0) board[p.y][p.x] = p.c;
@@ -569,36 +561,45 @@
         return { matches: matchedCells, colors: matchedColors };
       }
 
-      // --- キーボード操作の復活 ---
+      // 入力・コントロール
       window.addEventListener("keydown", (e) => {
         if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
-        if (e.key === "ArrowLeft") move(-1, 0);
-        if (e.key === "ArrowRight") move(1, 0);
-        if (e.key === "ArrowDown") move(0, 1);
+        if (e.key === "ArrowLeft") {
+          activePuyo.x--;
+          if (checkCollision(activePuyo)) activePuyo.x++;
+        }
+        if (e.key === "ArrowRight") {
+          activePuyo.x++;
+          if (checkCollision(activePuyo)) activePuyo.x--;
+        }
+        if (e.key === "ArrowDown") {
+          activePuyo.y++;
+          if (checkCollision(activePuyo)) activePuyo.y--;
+        }
         if (e.key === "ArrowUp") rotate();
         if (e.key === " ") {
           if (activePuyo) {
-            while (canMove(activePuyo, 0, 1)) {
-              activePuyo.y++;
-            }
+            while (canMove(activePuyo, 0, 1)) activePuyo.y++;
             lockTimer = LOCK_DELAY;
           }
         }
         draw();
       });
 
-      // --- コントローラー ---
       let moveRepeatTimer = null;
       function startMove(dx, dy) {
         if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
-        move(dx, dy);
+        activePuyo.x += dx;
+        if (checkCollision(activePuyo)) activePuyo.x -= dx;
         draw();
         clearInterval(moveRepeatTimer);
         moveRepeatTimer = setInterval(() => {
-          move(dx, dy);
+          activePuyo.x += dx;
+          if (checkCollision(activePuyo)) activePuyo.x -= dx;
           draw();
         }, 120);
       }
+
       const addLongPress = (id, action) => {
         const el = document.getElementById(id);
         el.addEventListener("pointerdown", (e) => {
@@ -606,6 +607,9 @@
           action();
         });
         el.addEventListener("pointerup", () => clearInterval(moveRepeatTimer));
+        el.addEventListener("pointerleave", () =>
+          clearInterval(moveRepeatTimer),
+        );
       };
       addLongPress("m-left", () => startMove(-1, 0));
       addLongPress("m-right", () => startMove(1, 0));
@@ -614,15 +618,13 @@
         draw();
       };
       document.getElementById("m-down").onclick = () => {
-        if (!isProcessing && !isPaused && activePuyo) {
-          while (canMove(activePuyo, 0, 1)) {
-            activePuyo.y++;
-          }
+        if (activePuyo) {
+          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
           lockTimer = LOCK_DELAY;
         }
       };
 
-      // --- データ保存 & ランキング ---
+      // システム機能
       function saveScore(s) {
         let data = JSON.parse(
           localStorage.getItem("globalPuyoData") || '{"users":[]}',
@@ -644,11 +646,11 @@
         let sorted = data.users
           .sort((a, b) => b.highScore - a.highScore)
           .slice(0, 20);
-        let html = "<table><tr><th>#</th><th>Name</th><th>Best Score</th></tr>";
-        sorted.forEach((u, i) => {
-          const isMe = u.id === playerID;
-          html += `<tr class="${isMe ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`;
-        });
+        let html = "<table><tr><th>#</th><th>Name</th><th>Best</th></tr>";
+        sorted.forEach(
+          (u, i) =>
+            (html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`),
+        );
         document.getElementById("rank-list").innerHTML = html + "</table>";
         startModal.classList.add("hidden");
         rankModal.classList.remove("hidden");
@@ -660,7 +662,7 @@
         score = 0;
         scoreElement.innerText = "0";
         activePuyo = null;
-        nextPuyo = new PuyoPair();
+        nextPuyos = [new PuyoPair(), new PuyoPair()];
         gameRunning = false;
         isProcessing = false;
         isPaused = false;
@@ -670,12 +672,8 @@
 
       function initApp() {
         let savedName = localStorage.getItem("puyoUserName");
-        let savedID = localStorage.getItem("puyoUserID");
-        if (!savedID) {
-          savedID =
-            "UID-" + Date.now() + Math.random().toString(36).substr(2, 5);
-          localStorage.setItem("puyoUserID", savedID);
-        }
+        let savedID = localStorage.getItem("puyoUserID") || "UID-" + Date.now();
+        localStorage.setItem("puyoUserID", savedID);
         playerID = savedID;
         if (savedName) {
           playerName = savedName;
@@ -688,10 +686,9 @@
 
       document.getElementById("loginBtn").onclick = () => {
         const val = document.getElementById("nickname").value.trim();
-        if (!val) return alert("名前を入力してください");
+        if (!val) return;
         playerName = val;
         localStorage.setItem("puyoUserName", val);
-        saveScore(0);
         showStartScreen();
       };
 
@@ -718,39 +715,24 @@
         gameRunning = true;
         gameLoop();
       };
-      document.getElementById("changeNameBtn").onclick = () => {
-        loginModal.classList.remove("hidden");
-        startModal.classList.add("hidden");
-      };
-      document.getElementById("startRankBtn").onclick = showRanking;
-      document.getElementById("backBtn").onclick = showStartScreen;
       document.getElementById("pauseBtn").onclick = () => {
         isPaused = !isPaused;
         draw();
       };
-      // アップデート版：ゲーム名も送れるようにする
-      function sendScore(playerName, playerScore, gameName) {
-        fetch("http://localhost:3000/api/score", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          // ここに gameName を追加！
-          body: JSON.stringify({
-            name: playerName,
-            score: playerScore,
-            game: gameName,
-          }),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            console.log("保存成功！");
-          })
-          .catch((error) => console.error("エラー:", error));
-      }
+      document.getElementById("resetBtn").onclick = () => {
+        if (confirm("リセットしますか？")) {
+          resetGame();
+          showStartScreen();
+        }
+      };
+      document.getElementById("startRankBtn").onclick = showRanking;
+      document.getElementById("backBtn").onclick = showStartScreen;
+      document.getElementById("changeNameBtn").onclick = () => {
+        loginModal.classList.remove("hidden");
+        startModal.classList.add("hidden");
+      };
 
-      // サーバーへスコアを送信する
-      initApp(); // ← これを追加！これがないと初期画面が出てきません
+      initApp();
     </script>
   </body>
 </html>
