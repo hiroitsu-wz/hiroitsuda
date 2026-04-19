@@ -261,13 +261,12 @@
     </div>
 
     <script>
-      // 新しく用意する音源ファイル
+      // --- 音源の設定 ---
       const sePuyoSet = new Audio("puyo_set.mp3");
       const sePuyoPop = new Audio("puyo_pop.mp3");
-
-      // 音量の個別設定（pop音は少し大きくするなど）
       sePuyoSet.volume = 0.4;
       sePuyoPop.volume = 0.6;
+
       const puyoImages = [];
       let loadedImages = 0;
       const totalToLoad = 5;
@@ -318,6 +317,9 @@
         img.onerror = () => {
           document.getElementById("load-status").innerHTML =
             `<span style="color:#ef4444">Error: puyo${i}.png not found!</span>`;
+          // 画像がなくても進行できるようにダミーとしてカウント
+          loadedImages++;
+          if (loadedImages === totalToLoad) checkUserAndInit();
         };
         puyoImages[i] = img;
       }
@@ -350,9 +352,19 @@
           Math.PI * 2,
         );
         targetCtx.clip();
-        if (puyoImages[colorIndex]) {
+
+        if (
+          puyoImages[colorIndex] &&
+          puyoImages[colorIndex].complete &&
+          puyoImages[colorIndex].naturalWidth !== 0
+        ) {
           targetCtx.drawImage(puyoImages[colorIndex], px, py, size, size);
+        } else {
+          // 画像がない場合のフォールバック（色円を描画）
+          targetCtx.fillStyle = COLORS[colorIndex] || "#fff";
+          targetCtx.fill();
         }
+
         targetCtx.strokeStyle = "rgba(255,255,255,0.5)";
         targetCtx.lineWidth = 2;
         targetCtx.stroke();
@@ -379,8 +391,8 @@
       let board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
       let score = 0,
         activePuyo = null,
-        isProcessing = false,
-        isPaused = false,
+        isProcessing = false;
+      let isPaused = false,
         gameRunning = false,
         waitingForStart = true;
       let playerName = "",
@@ -404,7 +416,6 @@
             .getPos()
             .forEach((p) => drawUnit(ctx, p.x, p.y, p.c, SIZE));
 
-        // パーティクルの更新と描画
         particles.forEach((p, index) => {
           p.update();
           p.draw(ctx);
@@ -473,6 +484,9 @@
             lockTimer++;
             if (lockTimer >= LOCK_DELAY) {
               lockPuyo();
+              // --- 着地音を鳴らす ---
+              sePuyoSet.currentTime = 0;
+              sePuyoSet.play();
               activePuyo = null;
               lockTimer = 0;
               isProcessing = true;
@@ -499,7 +513,11 @@
           scoreElement.innerText = score;
           showChainMsg(chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!");
 
-          // パーティクル生成
+          // --- 消滅音（連鎖でピッチアップ） ---
+          sePuyoPop.currentTime = 0;
+          sePuyoPop.playbackRate = 1.0 + chainCount * 0.1;
+          sePuyoPop.play();
+
           result.matches.forEach((p) => {
             const color = COLORS[board[p.y][p.x]] || "#ffffff";
             for (let i = 0; i < 8; i++) {
@@ -558,8 +576,8 @@
 
       function rotate() {
         if (!activePuyo || isProcessing || isPaused || waitingForStart) return;
-        const oldRot = activePuyo.rot;
-        const oldX = activePuyo.x;
+        const oldRot = activePuyo.rot,
+          oldX = activePuyo.x;
         activePuyo.rot = (activePuyo.rot + 1) % 4;
         if (checkCollision(activePuyo)) {
           activePuyo.x += 1;
@@ -589,7 +607,6 @@
           if (p.y >= 0) board[p.y][p.x] = p.c;
         });
       }
-
       function findMatches() {
         let matchedCells = [];
         let matchedColors = new Set();
@@ -709,6 +726,10 @@
       }
 
       document.getElementById("playBtn").onclick = () => {
+        // --- ブラウザの音声ロック解除 ---
+        sePuyoSet.play().then(() => sePuyoSet.pause());
+        sePuyoPop.play().then(() => sePuyoPop.pause());
+
         overlay.classList.add("hidden");
         waitingForStart = false;
         gameRunning = true;
@@ -763,14 +784,33 @@
         draw();
       });
 
-      document.getElementById("m-left").onclick = () => {
-        if (activePuyo && canMove(activePuyo, -1, 0)) activePuyo.x--;
+      // 画像版の長押し対応も念のため追加
+      let moveRepeatTimer = null;
+      function startMove(dx, dy) {
+        if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
+        activePuyo.x += dx;
+        if (checkCollision(activePuyo)) activePuyo.x -= dx;
         draw();
+        clearInterval(moveRepeatTimer);
+        moveRepeatTimer = setInterval(() => {
+          activePuyo.x += dx;
+          if (checkCollision(activePuyo)) activePuyo.x -= dx;
+          draw();
+        }, 120);
+      }
+      const addLongPress = (id, action) => {
+        const el = document.getElementById(id);
+        el.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          action();
+        });
+        el.addEventListener("pointerup", () => clearInterval(moveRepeatTimer));
+        el.addEventListener("pointerleave", () =>
+          clearInterval(moveRepeatTimer),
+        );
       };
-      document.getElementById("m-right").onclick = () => {
-        if (activePuyo && canMove(activePuyo, 1, 0)) activePuyo.x++;
-        draw();
-      };
+      addLongPress("m-left", () => startMove(-1, 0));
+      addLongPress("m-right", () => startMove(1, 0));
       document.getElementById("m-rotate").onclick = () => {
         rotate();
         draw();
