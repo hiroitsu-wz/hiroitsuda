@@ -8,6 +8,7 @@
     />
     <title>PUYOichi - Ultimate Edition</title>
     <style>
+      /* スタイル設定（変更なし） */
       html,
       body {
         width: 100%;
@@ -257,6 +258,13 @@
     </div>
 
     <script>
+      // 新しく用意する音源ファイル
+      const sePuyoSet = new Audio("puyo_set.mp3");
+      const sePuyoPop = new Audio("puyo_pop.mp3");
+
+      // 音量の個別設定（pop音は少し大きくするなど）
+      sePuyoSet.volume = 0.4;
+      sePuyoPop.volume = 0.6;
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const nextCanvas = document.getElementById("next-canvas");
@@ -279,6 +287,34 @@
         "#eab308",
         "#a855f7",
       ];
+
+      // パーティクルクラス
+      let particles = [];
+      class Particle {
+        constructor(x, y, color) {
+          this.x = x;
+          this.y = y;
+          this.color = color;
+          this.size = Math.random() * 5 + 2;
+          this.speedX = (Math.random() - 0.5) * 8;
+          this.speedY = (Math.random() - 0.5) * 8;
+          this.life = 1.0;
+        }
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          this.speedY += 0.2; // 重力
+          this.life -= 0.03;
+        }
+        draw(targetCtx) {
+          targetCtx.fillStyle = this.color;
+          targetCtx.globalAlpha = this.life;
+          targetCtx.beginPath();
+          targetCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          targetCtx.fill();
+          targetCtx.globalAlpha = 1.0;
+        }
+      }
 
       class PuyoPair {
         constructor() {
@@ -324,6 +360,14 @@
           activePuyo
             .getPos()
             .forEach((p) => drawUnit(ctx, p.x, p.y, p.c, SIZE));
+
+        // パーティクルの更新と描画
+        particles.forEach((p, index) => {
+          p.update();
+          p.draw(ctx);
+          if (p.life <= 0) particles.splice(index, 1);
+        });
+
         if (isPaused) {
           ctx.fillStyle = "rgba(0,0,0,0.6)";
           ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -430,19 +474,31 @@
           await applyGravityAnimated();
           const result = findMatches();
           if (result.matches.length === 0) break;
-
           chainCount++;
           const colorCount = result.colors.size;
           score +=
             result.matches.length * 10 * (chainCount + (colorCount - 1) * 2);
           scoreElement.innerText = score;
-
           showChainMsg(chainCount > 1 ? `${chainCount} CHAIN!` : "HIT!");
-          result.matches.forEach((p) => (board[p.y][p.x] = 0));
+
+          // パーティクル生成
+          result.matches.forEach((p) => {
+            const color = COLORS[board[p.y][p.x]] || "#ffffff";
+            for (let i = 0; i < 8; i++) {
+              particles.push(
+                new Particle(
+                  p.x * SIZE + SIZE / 2,
+                  p.y * SIZE + SIZE / 2,
+                  color,
+                ),
+              );
+            }
+            board[p.y][p.x] = 0;
+          });
+
           draw();
           await new Promise((r) => setTimeout(r, 400));
         }
-        // 全消しボーナス
         if (board.every((row) => row.every((cell) => cell === 0))) {
           score += 2100;
           scoreElement.innerText = score;
@@ -487,8 +543,6 @@
         const oldRot = activePuyo.rot;
         const oldX = activePuyo.x;
         activePuyo.rot = (activePuyo.rot + 1) % 4;
-
-        // 【強化】壁蹴りロジック：左右に余裕があれば自動でずらして回転
         if (checkCollision(activePuyo)) {
           activePuyo.x += 1;
           if (checkCollision(activePuyo)) {
@@ -561,7 +615,7 @@
         return { matches: matchedCells, colors: matchedColors };
       }
 
-      // 入力・コントロール
+      // 入力系
       window.addEventListener("keydown", (e) => {
         if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
         if (e.key === "ArrowLeft") {
@@ -599,7 +653,6 @@
           draw();
         }, 120);
       }
-
       const addLongPress = (id, action) => {
         const el = document.getElementById(id);
         el.addEventListener("pointerdown", (e) => {
@@ -624,7 +677,7 @@
         }
       };
 
-      // システム機能
+      // システム系
       function saveScore(s) {
         let data = JSON.parse(
           localStorage.getItem("globalPuyoData") || '{"users":[]}',
@@ -638,7 +691,6 @@
         }
         localStorage.setItem("globalPuyoData", JSON.stringify(data));
       }
-
       function showRanking() {
         const data = JSON.parse(
           localStorage.getItem("globalPuyoData") || '{"users":[]}',
@@ -656,7 +708,6 @@
         rankModal.classList.remove("hidden");
         overlay.classList.remove("hidden");
       }
-
       function resetGame() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         score = 0;
@@ -669,7 +720,6 @@
         chainMsg.innerText = "";
         draw();
       }
-
       function initApp() {
         let savedName = localStorage.getItem("puyoUserName");
         let savedID = localStorage.getItem("puyoUserID") || "UID-" + Date.now();
@@ -683,7 +733,6 @@
           loginModal.classList.remove("hidden");
         }
       }
-
       document.getElementById("loginBtn").onclick = () => {
         const val = document.getElementById("nickname").value.trim();
         if (!val) return;
@@ -691,7 +740,6 @@
         localStorage.setItem("puyoUserName", val);
         showStartScreen();
       };
-
       function showStartScreen() {
         document.getElementById("player-display").innerText =
           `PLAYER: ${playerName}`;
@@ -701,14 +749,12 @@
         startModal.classList.remove("hidden");
         waitingForStart = true;
       }
-
       function showChainMsg(txt) {
         chainMsg.innerText = txt;
         setTimeout(() => {
           if (chainMsg.innerText === txt) chainMsg.innerText = "";
         }, 1200);
       }
-
       document.getElementById("playBtn").onclick = () => {
         overlay.classList.add("hidden");
         waitingForStart = false;
@@ -731,7 +777,6 @@
         loginModal.classList.remove("hidden");
         startModal.classList.add("hidden");
       };
-
       initApp();
     </script>
   </body>
