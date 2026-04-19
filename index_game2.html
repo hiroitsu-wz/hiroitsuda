@@ -215,6 +215,13 @@
         <p id="player-display" style="color: #38bdf8; margin-bottom: 15px"></p>
         <button id="playBtn" class="big-btn">GAME START</button>
         <button id="startRankBtn" class="big-btn sub-btn">RANKING</button>
+        <button
+          id="changeNameBtn"
+          class="big-btn sub-btn"
+          style="background: transparent; color: #94a3b8"
+        >
+          Change Name
+        </button>
       </div>
       <div id="rank-modal" class="modal hidden">
         <h2 style="margin: 0 0 10px 0">Personal Bests</h2>
@@ -259,10 +266,9 @@
       let loadedImages = 0;
       const totalToLoad = 5;
 
-      // puyo1.png 〜 puyo5.png をロード
       for (let i = 1; i <= 5; i++) {
         const img = new Image();
-        img.src = `puyo${i}.png`; // ローカルの画像ファイルを参照
+        img.src = `puyo${i}.png`;
         img.onload = () => {
           loadedImages++;
           if (loadedImages === totalToLoad) {
@@ -283,18 +289,18 @@
       const scoreElement = document.getElementById("score");
       const chainMsg = document.getElementById("chain-msg");
       const overlay = document.getElementById("overlay");
+      const loginModal = document.getElementById("login-modal");
+      const startModal = document.getElementById("start-modal");
+      const rankModal = document.getElementById("rank-modal");
 
       const ROWS = 12,
         COLS = 6,
         SIZE = 40;
 
-      // --- 描画関数（ここが写真対応） ---
       function drawUnit(targetCtx, x, y, colorIndex, size) {
         const px = x * size;
         const py = y * size;
-
         targetCtx.save();
-        // 丸く切り抜く
         targetCtx.beginPath();
         targetCtx.arc(
           px + size / 2,
@@ -304,20 +310,15 @@
           Math.PI * 2,
         );
         targetCtx.clip();
-
-        // 画像を描画
         if (puyoImages[colorIndex]) {
           targetCtx.drawImage(puyoImages[colorIndex], px, py, size, size);
         }
-
-        // 縁取り（白）
         targetCtx.strokeStyle = "rgba(255,255,255,0.5)";
         targetCtx.lineWidth = 2;
         targetCtx.stroke();
         targetCtx.restore();
       }
 
-      // 既存のロジック（そのまま）
       class PuyoPair {
         constructor() {
           this.x = 2;
@@ -580,7 +581,7 @@
           showStartScreen();
         } else {
           overlay.classList.remove("hidden");
-          document.getElementById("login-modal").classList.remove("hidden");
+          loginModal.classList.remove("hidden");
         }
       }
 
@@ -588,9 +589,9 @@
         document.getElementById("player-display").innerText =
           `PLAYER: ${playerName}`;
         overlay.classList.remove("hidden");
-        document.getElementById("login-modal").classList.add("hidden");
-        document.getElementById("rank-modal").classList.add("hidden");
-        document.getElementById("start-modal").classList.remove("hidden");
+        loginModal.classList.add("hidden");
+        rankModal.classList.add("hidden");
+        startModal.classList.remove("hidden");
         waitingForStart = true;
       }
 
@@ -621,8 +622,8 @@
             (html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`),
         );
         document.getElementById("rank-list").innerHTML = html + "</table>";
-        document.getElementById("start-modal").classList.add("hidden");
-        document.getElementById("rank-modal").classList.remove("hidden");
+        startModal.classList.add("hidden");
+        rankModal.classList.remove("hidden");
       }
 
       function resetGame() {
@@ -653,12 +654,19 @@
         gameLoop();
       };
       document.getElementById("loginBtn").onclick = () => {
-        playerName = document.getElementById("nickname").value.trim();
-        if (playerName) {
-          localStorage.setItem("puyoUserName", playerName);
+        const val = document.getElementById("nickname").value.trim();
+        if (val) {
+          playerName = val;
+          localStorage.setItem("puyoUserName", val);
           showStartScreen();
         }
       };
+      // 1の機能（名前変更ボタン）
+      document.getElementById("changeNameBtn").onclick = () => {
+        loginModal.classList.remove("hidden");
+        startModal.classList.add("hidden");
+      };
+
       document.getElementById("pauseBtn").onclick = () => {
         isPaused = !isPaused;
         draw();
@@ -672,7 +680,7 @@
       document.getElementById("startRankBtn").onclick = showRanking;
       document.getElementById("backBtn").onclick = showStartScreen;
 
-      // キー操作・フリック対応
+      // キー操作
       window.addEventListener("keydown", (e) => {
         if (!gameRunning || isPaused || isProcessing || waitingForStart) return;
         if (e.key === "ArrowLeft") {
@@ -697,13 +705,13 @@
         draw();
       });
 
-      // UIボタン（長押し対応は簡易版に変更）
+      // UIボタン
       document.getElementById("m-left").onclick = () => {
-        if (canMove(activePuyo, -1, 0)) activePuyo.x--;
+        if (activePuyo && canMove(activePuyo, -1, 0)) activePuyo.x--;
         draw();
       };
       document.getElementById("m-right").onclick = () => {
-        if (canMove(activePuyo, 1, 0)) activePuyo.x++;
+        if (activePuyo && canMove(activePuyo, 1, 0)) activePuyo.x++;
         draw();
       };
       document.getElementById("m-rotate").onclick = () => {
