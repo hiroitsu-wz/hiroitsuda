@@ -225,6 +225,7 @@
     <a href="page2.html">お問い合わせはこちら</a>
     <a href="index_game.html">ミニゲームをしてみよう！</a>
     <a href="index_game2.html">Tani版ミニゲーム!</a>
+    <a href="puyo_tsuusin.html">通信対戦🔥</a>
     <h1>自己紹介</h1>
     <p>
       はじめまして。Taniです。<br />
@@ -365,6 +366,14 @@
           "a:not(.prev-btn):not(.next-btn):not(.mySlides a)",
         );
 
+        // 音を鳴らさない除外リンクのリスト
+        const silentHrefs = [
+          "page2.html",
+          "index_game.html",
+          "index_game2.html",
+          "puyo_tsuusin.html",
+        ];
+
         allLinks.forEach((link) => {
           const originalText = link.innerText;
           const href = link.getAttribute("href") || "";
@@ -376,7 +385,12 @@
           link.addEventListener("mouseleave", () => {
             link.innerText = originalText;
           });
-          link.addEventListener("click", () => {
+          link.addEventListener("click", (e) => {
+            // もしhrefが除外リストに含まれていたら、音を鳴らさずに終了
+            if (silentHrefs.includes(href)) {
+              return;
+            }
+
             if (href.startsWith("#")) {
               syunkanSound.play().catch(() => {});
             } else {
