@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>PUYOichi Online - PvP Complete</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --accent: #3b82f6;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: white;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        touch-action: none;
+        overflow: hidden;
+      }
+
+      .battle-container {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        position: relative;
+      }
+      .field-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      canvas {
+        background: var(--panel);
+        border: 2px solid #475569;
+        border-radius: 8px;
+        width: 140px;
+        height: 280px;
+      }
+      .my-field canvas {
+        border-color: var(--accent);
+        width: 170px;
+        height: 340px;
+      }
+
+      #connection-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.95);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal {
+        background: var(--panel);
+        padding: 25px;
+        border-radius: 20px;
+        text-align: center;
+        width: 85%;
+        max-width: 320px;
+        border: 1px solid #334155;
+      }
+      input {
+        width: 90%;
+        padding: 12px;
+        margin: 15px 0;
+        background: #0f172a;
+        color: white;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        font-size: 18px;
+        text-align: center;
+        letter-spacing: 2px;
+      }
+      .btn {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+        font-size: 16px;
+        transition: opacity 0.2s;
+      }
+      .btn:active {
+        opacity: 0.7;
+      }
+
+      .status-bar {
+        font-size: 14px;
+        margin-top: 5px;
+        color: #38bdf8;
+        font-weight: bold;
+      }
+      .ojama-bar {
+        height: 20px;
+        color: #ef4444;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .score-display {
+        font-size: 14px;
+        margin-top: 5px;
+        color: #94a3b8;
+      }
+      .ctrl-area {
+        margin-top: 15px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        width: 90%;
+        max-width: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="connection-overlay">
+      <div class="modal">
+        <h2 style="margin: 0 0 10px 0">PUYOichi PvP</h2>
+        <div
+          id="peer-id-display"
+          style="font-size: 20px; color: #38bdf8; font-weight: 800"
+        >
+          ID: 生成中...
+        </div>
+        <p style="font-size: 12px; color: #94a3b8">
+          この数字を相手に伝えてください
+        </p>
+        <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0" />
+        <input
+          type="tel"
+          id="target-id"
+          placeholder="相手の10桁IDを入力"
+          maxlength="10"
+        />
+        <button class="btn" id="connect-btn">対戦を申し込む</button>
+      </div>
+    </div>
+
+    <div class="status-bar" id="game-status">対戦相手を待っています...</div>
+
+    <div class="battle-container">
+      <div class="field-wrapper my-field">
+        <div class="ojama-bar" id="my-ojama"></div>
+        <canvas id="my-canvas" width="240" height="480"></canvas>
+        <div class="score-display" id="my-score">YOU: 0</div>
+      </div>
+
+      <div class="field-wrapper">
+        <div class="ojama-bar" id="enemy-ojama"></div>
+        <canvas id="enemy-canvas" width="240" height="480"></canvas>
+        <div class="score-display" id="enemy-score">ENEMY: 0</div>
+      </div>
+    </div>
+
+    <div class="ctrl-area">
+      <button class="btn" id="btn-l">←</button>
+      <button class="btn" id="btn-rot" style="background: #8b5cf6">ROT</button>
+      <button class="btn" id="btn-r">→</button>
+      <button
+        class="btn"
+        id="btn-down"
+        style="grid-column: span 3; background: #1d4ed8"
+      >
+        QUICK DROP
+      </button>
+    </div>
+
+    <script>
+      // --- 通信セクション (数字10桁・セッション管理) ---
+      let peer, conn;
+      const overlay = document.getElementById("connection-overlay");
+      const myIdDisplay = document.getElementById("peer-id-display");
+      const targetIdInput = document.getElementById("target-id");
+      const connectBtn = document.getElementById("connect-btn");
+      const statusText = document.getElementById("game-status");
+
+      function generate10DigitID() {
+        return Math.floor(Math.random() * 9000000000 + 1000000000).toString();
+      }
+
+      const myID = generate10DigitID();
+      peer = new Peer(myID);
+
+      peer.on("open", (id) => (myIdDisplay.innerText = `ID: ${id}`));
+      peer.on("error", () => location.reload());
+
+      peer.on("connection", (c) => {
+        conn = c;
+        initConn();
+      });
+
+      connectBtn.onclick = () => {
+        const tid = targetIdInput.value.trim();
+        if (tid.length === 10) {
+          conn = peer.connect(tid);
+          initConn();
+        }
+      };
+
+      function initConn() {
+        conn.on("open", () => {
+          overlay.style.display = "none";
+          statusText.innerText = "READY! 接続完了";
+          startGame();
+        });
+        conn.on("data", (data) => {
+          if (data.type === "STATE") {
+            enemyBoard = data.board;
+            enemyScore = data.score;
+            enemyOjama = data.ojama;
+            drawEnemy();
+          }
+          if (data.type === "ATTACK") pendingOjama += data.amount;
+        });
+        conn.on("close", () => {
+          alert("相手との接続が切れました");
+          location.reload();
+        });
+      }
+
+      function sync() {
+        if (conn && conn.open) {
+          conn.send({
+            type: "STATE",
+            board: board,
+            score: score,
+            ojama: pendingOjama,
+          });
+        }
+      }
+
+      function attack(n) {
+        if (conn && conn.open) conn.send({ type: "ATTACK", amount: n });
+      }
+
+      // --- ゲームエンジン ---
+      const myCanvas = document.getElementById("my-canvas");
+      const myCtx = myCanvas.getContext("2d");
+      const enemyCanvas = document.getElementById("enemy-canvas");
+      const enemyCtx = enemyCanvas.getContext("2d");
+
+      const ROWS = 12,
+        COLS = 6,
+        SIZE = 40;
+      let board,
+        enemyBoard,
+        activePuyo,
+        score,
+        enemyScore,
+        pendingOjama,
+        enemyOjama;
+      const COLORS = [
+        null,
+        "#ef4444",
+        "#22c55e",
+        "#3b82f6",
+        "#eab308",
+        null,
+        null,
+        null,
+        null,
+        "#94a3b8",
+      ];
+
+      function initVars() {
+        board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        enemyBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        score = 0;
+        enemyScore = 0;
+        pendingOjama = 0;
+        enemyOjama = 0;
+      }
+
+      class PuyoPair {
+        constructor() {
+          this.x = 2;
+          this.y = 0;
+          this.rot = 0;
+          this.c1 = Math.floor(Math.random() * 4) + 1;
+          this.c2 = Math.floor(Math.random() * 4) + 1;
+        }
+        getPos() {
+          const p = [{ x: this.x, y: this.y, c: this.c1 }];
+          const ox = [0, 1, 0, -1][this.rot],
+            oy = [-1, 0, 1, 0][this.rot];
+          p.push({ x: this.x + ox, y: this.y + oy, c: this.c2 });
+          return p;
+        }
+      }
+
+      function drawField(ctx, b, active = null) {
+        ctx.clearRect(0, 0, 240, 480);
+        b.forEach((row, y) =>
+          row.forEach((c, x) => {
+            if (c) drawCircle(ctx, x, y, c);
+          }),
+        );
+        if (active)
+          active.getPos().forEach((p) => drawCircle(ctx, p.x, p.y, p.c));
+      }
+
+      function drawCircle(ctx, x, y, c) {
+        ctx.fillStyle = COLORS[c];
+        ctx.beginPath();
+        ctx.arc(x * SIZE + 20, y * SIZE + 20, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.stroke();
+      }
+
+      function drawEnemy() {
+        drawField(enemyCtx, enemyBoard);
+        document.getElementById("enemy-score").innerText =
+          `ENEMY: ${enemyScore}`;
+        document.getElementById("enemy-ojama").innerText = "⚠".repeat(
+          Math.min(enemyOjama, 6),
+        );
+      }
+
+      function canMove(p, dx, dy, dr = 0) {
+        const nr = (p.rot + dr + 4) % 4;
+        const test = { x: p.x + dx, y: p.y + dy, rot: nr, getPos: p.getPos };
+        return test
+          .getPos()
+          .every(
+            (pos) =>
+              pos.x >= 0 &&
+              pos.x < COLS &&
+              pos.y < ROWS &&
+              (pos.y < 0 || board[pos.y][pos.x] === 0),
+          );
+      }
+
+      async function startGame() {
+        initVars();
+        activePuyo = new PuyoPair();
+        loop();
+      }
+
+      async function loop() {
+        if (canMove(activePuyo, 0, 1)) {
+          activePuyo.y++;
+        } else {
+          activePuyo.getPos().forEach((p) => {
+            if (p.y >= 0) board[p.y][p.x] = p.c;
+          });
+          await handleChain();
+          if (pendingOjama > 0) dropOjama();
+          activePuyo = new PuyoPair();
+          if (!canMove(activePuyo, 0, 0)) {
+            alert("GAME OVER!");
+            location.reload();
+            return;
+          }
+        }
+        drawField(myCtx, board, activePuyo);
+        document.getElementById("my-score").innerText = `YOU: ${score}`;
+        document.getElementById("my-ojama").innerText = "⚠".repeat(
+          Math.min(pendingOjama, 6),
+        );
+        sync();
+        setTimeout(loop, 600);
+      }
+
+      async function handleChain() {
+        let chain = 0;
+        while (true) {
+          let falling = true;
+          while (falling) {
+            falling = false;
+            for (let y = ROWS - 2; y >= 0; y--)
+              for (let x = 0; x < COLS; x++) {
+                if (board[y][x] && !board[y + 1][x]) {
+                  board[y + 1][x] = board[y][x];
+                  board[y][x] = 0;
+                  falling = true;
+                }
+              }
+            if (falling) {
+              drawField(myCtx, board);
+              await new Promise((r) => setTimeout(r, 50));
+            }
+          }
+
+          let matches = findMatches();
+          if (matches.length === 0) break;
+          chain++;
+          matches.forEach((p) => (board[p.y][p.x] = 0));
+          score += matches.length * 10 * chain;
+          if (chain >= 2) attack(chain * 3);
+          drawField(myCtx, board);
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
+
+      function findMatches() {
+        let found = [];
+        let v = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+        for (let y = 0; y < ROWS; y++)
+          for (let x = 0; x < COLS; x++) {
+            if (board[y][x] && board[y][x] !== 9 && !v[y][x]) {
+              let group = [],
+                color = board[y][x],
+                q = [{ x, y }];
+              while (q.length) {
+                let p = q.pop();
+                if (
+                  p.x < 0 ||
+                  p.x >= COLS ||
+                  p.y < 0 ||
+                  p.y >= ROWS ||
+                  v[p.y][p.x] ||
+                  board[p.y][p.x] !== color
+                )
+                  continue;
+                v[p.y][p.x] = true;
+                group.push(p);
+                q.push(
+                  { x: p.x + 1, y: p.y },
+                  { x: p.x - 1, y: p.y },
+                  { x: p.x, y: p.y + 1 },
+                  { x: p.x, y: p.y - 1 },
+                );
+              }
+              if (group.length >= 4) found.push(...group);
+            }
+          }
+        return found;
+      }
+
+      function dropOjama() {
+        let lines = Math.floor(pendingOjama / 6) + 1;
+        for (let i = 0; i < Math.min(lines, 2); i++) {
+          for (let x = 0; x < COLS; x++) {
+            if (board[0][x] === 0 && pendingOjama > 0) {
+              board[0][x] = 9;
+              pendingOjama--;
+            }
+          }
+        }
+      }
+
+      // 操作
+      const move = (dx, dy, dr) => {
+        if (canMove(activePuyo, dx, dy, dr)) {
+          activePuyo.x += dx;
+          activePuyo.y += dy;
+          activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
+          drawField(myCtx, board, activePuyo);
+          sync();
+        }
+      };
+      document.getElementById("btn-l").onclick = () => move(-1, 0, 0);
+      document.getElementById("btn-r").onclick = () => move(1, 0, 0);
+      document.getElementById("btn-rot").onclick = () => move(0, 0, 1);
+      document.getElementById("btn-down").onclick = () => {
+        while (canMove(activePuyo, 0, 1)) activePuyo.y++;
+        drawField(myCtx, board, activePuyo);
+      };
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") move(-1, 0, 0);
+        if (e.key === "ArrowRight") move(1, 0, 0);
+        if (e.key === "ArrowUp" || e.key === "z") move(0, 0, 1);
+        if (e.key === "ArrowDown") move(0, 1, 0);
+        if (e.key === " ") {
+          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
+          drawField(myCtx, board, activePuyo);
+        }
+      });
+    </script>
+  </body>
+</html>
