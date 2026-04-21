@@ -27,8 +27,6 @@
         overflow: hidden;
         height: 100vh;
       }
-
-      /* UIオーバーレイ */
       #ui-overlay {
         position: absolute;
         top: 0;
@@ -50,8 +48,6 @@
         max-width: 320px;
         border: 1px solid #334155;
       }
-
-      /* カウントダウン表示 */
       #countdown {
         position: absolute;
         top: 50%;
@@ -63,8 +59,6 @@
         text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         pointer-events: none;
       }
-
-      /* バトル画面 */
       .battle-container {
         display: flex;
         gap: 15px;
@@ -83,8 +77,6 @@
         width: 170px;
         height: 340px;
       }
-
-      /* 勝利ランプ */
       .win-lamps {
         margin-bottom: 5px;
       }
@@ -101,8 +93,6 @@
         background: var(--win);
         box-shadow: 0 0 10px var(--win);
       }
-
-      /* ボタン・入力 */
       input {
         width: 90%;
         padding: 12px;
@@ -128,12 +118,7 @@
       }
       .btn:disabled {
         opacity: 0.5;
-        cursor: not-allowed;
       }
-      .btn-exit {
-        background: #ef4444;
-      }
-
       .ojama-bar {
         height: 20px;
         color: #ef4444;
@@ -147,6 +132,11 @@
         gap: 10px;
         width: 90%;
         max-width: 300px;
+      }
+      #status-msg {
+        font-size: 12px;
+        color: #ef4444;
+        margin-top: 10px;
       }
     </style>
   </head>
@@ -163,7 +153,7 @@
             margin: 15px 0;
           "
         >
-          ID生成中...
+          通信準備中...
         </div>
         <input
           type="tel"
@@ -172,12 +162,13 @@
           maxlength="10"
         />
         <button class="btn" id="connect-btn">対戦を申し込む</button>
+        <div id="status-msg"></div>
       </div>
 
       <div id="view-ready" class="modal" style="display: none">
-        <h2 id="ready-title">READY?</h2>
+        <h2>READY?</h2>
         <p id="ready-status" style="color: #94a3b8">
-          相手の準備を待っています...
+          相手の接続を待っています...
         </p>
         <button class="btn" id="ready-btn">準備OK！</button>
       </div>
@@ -189,8 +180,12 @@
         </p>
         <div id="final-actions" style="display: none">
           <button class="btn" id="rematch-btn">もう一度プレイ</button>
-          <button class="btn btn-exit" onclick="location.reload()">
-            部屋を抜ける
+          <button
+            class="btn"
+            style="background: #ef4444"
+            onclick="location.reload()"
+          >
+            終了
           </button>
         </div>
       </div>
@@ -213,7 +208,6 @@
           YOU: 0
         </div>
       </div>
-
       <div class="field-wrapper">
         <div class="win-lamps" id="enemy-lamps">
           <div class="lamp"></div>
@@ -233,7 +227,7 @@
     <div class="ctrl-area">
       <button class="btn" onclick="move(-1, 0, 0)">←</button>
       <button class="btn" style="background: #8b5cf6" onclick="move(0, 0, 1)">
-        ROT
+        回転
       </button>
       <button class="btn" onclick="move(1, 0, 0)">→</button>
       <button
@@ -247,34 +241,57 @@
 
     <script>
       let peer, conn;
-      let myID = Math.floor(Math.random() * 9000000000 + 1000000000).toString();
+      let myID = Math.floor(1000000000 + Math.random() * 9000000000).toString();
       let myWins = 0,
         enemyWins = 0;
       let isReady = false,
-        enemyReady = false;
-      let gameActive = false;
+        enemyReady = false,
+        gameActive = false;
 
-      // 通信初期化
-      peer = new Peer(myID);
-      peer.on(
-        "open",
-        (id) =>
-          (document.getElementById("my-id-display").innerText = "ID: " + id),
-      );
-      peer.on("connection", (c) => {
-        conn = c;
-        initConn();
-      });
+      // --- 通信エンジン (修正版) ---
+      function initPeer() {
+        // GoogleのSTUNサーバーを使用してネットワークの壁を越える
+        peer = new Peer(myID, {
+          config: {
+            iceServers: [
+              { urls: "stun:stun.l.google.com:19302" },
+              { urls: "stun:stun1.l.google.com:19302" },
+            ],
+          },
+          debug: 1,
+        });
+
+        peer.on("open", (id) => {
+          document.getElementById("my-id-display").innerText = "ID: " + id;
+        });
+
+        peer.on("connection", (c) => {
+          conn = c;
+          setupConnHandlers();
+        });
+
+        peer.on("error", (err) => {
+          document.getElementById("status-msg").innerText =
+            "エラー: " + err.type;
+          console.error(err);
+        });
+      }
+
       document.getElementById("connect-btn").onclick = () => {
         const tid = document.getElementById("target-id").value;
         if (tid.length === 10) {
-          conn = peer.connect(tid);
-          initConn();
+          document.getElementById("status-msg").innerText = "接続中...";
+          conn = peer.connect(tid, { reliable: true });
+          setupConnHandlers();
+        } else {
+          alert("IDは10桁で入力してください");
         }
       };
 
-      function initConn() {
-        conn.on("open", () => showView("view-ready"));
+      function setupConnHandlers() {
+        conn.on("open", () => {
+          showView("view-ready");
+        });
         conn.on("data", (data) => {
           if (data.type === "READY") {
             enemyReady = true;
@@ -287,8 +304,12 @@
             drawEnemy();
           }
           if (data.type === "ATTACK") pendingOjama += data.amount;
-          if (data.type === "LOSE") handleWin(); // 相手が負けた通知＝自分の勝ち
+          if (data.type === "LOSE") handleWin();
           if (data.type === "REMATCH") resetMatch();
+        });
+        conn.on("close", () => {
+          alert("通信が切断されました");
+          location.reload();
         });
       }
 
@@ -327,7 +348,7 @@
         startGame();
       }
 
-      // ゲームエンジン
+      // --- ゲームロジック ---
       const myCanvas = document.getElementById("my-canvas");
       const myCtx = myCanvas.getContext("2d");
       const enemyCanvas = document.getElementById("enemy-canvas");
@@ -374,7 +395,6 @@
         updateLamps();
         showResult("WIN");
       }
-
       function handleLose() {
         if (!gameActive) return;
         gameActive = false;
@@ -394,41 +414,27 @@
       }
 
       function showResult(res) {
-        const view = document.getElementById("view-result");
-        const txt = document.getElementById("result-text");
-        const sub = document.getElementById("result-subtext");
-        const actions = document.getElementById("final-actions");
-
         showView("view-result");
+        const txt = document.getElementById("result-text");
         txt.innerText = res;
         txt.style.color = res === "WIN" ? "#eab308" : "#ef4444";
-
         if (myWins >= 2 || enemyWins >= 2) {
-          sub.innerText = "最終決着！";
-          actions.style.display = "block";
+          document.getElementById("result-subtext").innerText = "決着！";
+          document.getElementById("final-actions").style.display = "block";
         } else {
-          sub.innerText = "画面をタップして次戦の準備へ";
-          actions.style.display = "none";
-          view.onclick = () => {
-            view.onclick = null;
-            nextMatchReady();
+          document.getElementById("result-subtext").innerText =
+            "画面タップで次戦へ";
+          document.getElementById("view-result").onclick = () => {
+            document.getElementById("view-result").onclick = null;
+            isReady = false;
+            enemyReady = false;
+            document.getElementById("ready-btn").disabled = false;
+            showView("view-ready");
           };
         }
       }
 
-      function nextMatchReady() {
-        isReady = false;
-        enemyReady = false;
-        document.getElementById("ready-btn").disabled = false;
-        document.getElementById("ready-status").innerText =
-          "お互いに準備ボタンを押してください";
-        showView("view-ready");
-      }
-
       document.getElementById("rematch-btn").onclick = () => {
-        myWins = 0;
-        enemyWins = 0;
-        updateLamps();
         conn.send({ type: "REMATCH" });
         resetMatch();
       };
@@ -437,7 +443,10 @@
         myWins = 0;
         enemyWins = 0;
         updateLamps();
-        nextMatchReady();
+        isReady = false;
+        enemyReady = false;
+        document.getElementById("ready-btn").disabled = false;
+        showView("view-ready");
       }
 
       class PuyoPair {
@@ -473,7 +482,7 @@
         }
         draw();
         sync();
-        setTimeout(loop, 600);
+        setTimeout(loop, 800);
       }
 
       async function handleChain() {
@@ -483,20 +492,19 @@
           while (falling) {
             falling = false;
             for (let y = ROWS - 2; y >= 0; y--)
-              for (let x = 0; x < COLS; x++) {
+              for (let x = 0; x < COLS; x++)
                 if (board[y][x] && !board[y + 1][x]) {
                   board[y + 1][x] = board[y][x];
                   board[y][x] = 0;
                   falling = true;
                 }
-              }
           }
           let matches = findMatches();
           if (matches.length === 0) break;
           chain++;
           matches.forEach((p) => (board[p.y][p.x] = 0));
           score += matches.length * 10 * chain;
-          if (chain >= 2) conn.send({ type: "ATTACK", amount: chain * 3 });
+          if (chain >= 2) conn.send({ type: "ATTACK", amount: chain * 2 });
           draw();
           await new Promise((r) => setTimeout(r, 400));
         }
@@ -505,7 +513,7 @@
       function findMatches() {
         let found = [];
         let v = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
-        for (let y = 0; y < ROWS; y++)
+        for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
             if (board[y][x] && board[y][x] !== 9 && !v[y][x]) {
               let color = board[y][x],
@@ -534,16 +542,19 @@
               if (group.length >= 4) found.push(...group);
             }
           }
+        }
         return found;
       }
 
       function dropOjama() {
-        let lines = Math.floor(pendingOjama / 6) + 1;
-        for (let i = 0; i < Math.min(lines, 2); i++) {
-          for (let x = 0; x < COLS; x++) {
-            if (board[0][x] === 0 && pendingOjama > 0) {
-              board[0][x] = 9;
+        let count = Math.min(pendingOjama, 6);
+        for (let i = 0; i < count; i++) {
+          let x = Math.floor(Math.random() * COLS);
+          for (let y = 0; y < ROWS; y++) {
+            if (board[y][x] === 0) {
+              board[y][x] = 9;
               pendingOjama--;
+              break;
             }
           }
         }
@@ -583,8 +594,6 @@
         ctx.beginPath();
         ctx.arc(x * SIZE + 20, y * SIZE + 20, 18, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.2)";
-        ctx.stroke();
       }
 
       function sync() {
@@ -609,7 +618,7 @@
         );
       }
 
-      const move = (dx, dy, dr) => {
+      function move(dx, dy, dr) {
         if (gameActive && canMove(activePuyo, dx, dy, dr)) {
           activePuyo.x += dx;
           activePuyo.y += dy;
@@ -617,22 +626,24 @@
           draw();
           sync();
         }
-      };
-      const quickDrop = () => {
+      }
+      function quickDrop() {
         if (gameActive) {
           while (canMove(activePuyo, 0, 1)) activePuyo.y++;
           draw();
           sync();
         }
-      };
+      }
 
       window.addEventListener("keydown", (e) => {
         if (e.key === "ArrowLeft") move(-1, 0, 0);
         if (e.key === "ArrowRight") move(1, 0, 0);
-        if (e.key === "ArrowUp" || e.key === "z") move(0, 0, 1);
+        if (e.key === "ArrowUp") move(0, 0, 1);
         if (e.key === "ArrowDown") move(0, 1, 0);
         if (e.key === " ") quickDrop();
       });
+
+      initPeer();
     </script>
   </body>
 </html>
