@@ -6,13 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>PUYOichi Online - PvP Complete</title>
+    <title>PUYOichi Online - Pro PvP</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
       :root {
         --bg: #0f172a;
         --panel: #1e293b;
         --accent: #3b82f6;
+        --win: #eab308;
       }
       body {
         margin: 0;
@@ -24,21 +25,54 @@
         align-items: center;
         touch-action: none;
         overflow: hidden;
+        height: 100vh;
       }
 
+      /* UIオーバーレイ */
+      #ui-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1000;
+        background: rgba(15, 23, 42, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal {
+        background: var(--panel);
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        width: 85%;
+        max-width: 320px;
+        border: 1px solid #334155;
+      }
+
+      /* カウントダウン表示 */
+      #countdown {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 100px;
+        font-weight: 900;
+        z-index: 500;
+        text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+      }
+
+      /* バトル画面 */
       .battle-container {
         display: flex;
         gap: 15px;
         margin-top: 10px;
         position: relative;
       }
-      .field-wrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
       canvas {
-        background: var(--panel);
+        background: #000;
         border: 2px solid #475569;
         border-radius: 8px;
         width: 140px;
@@ -50,28 +84,25 @@
         height: 340px;
       }
 
-      #connection-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(15, 23, 42, 0.95);
-        z-index: 1000;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+      /* 勝利ランプ */
+      .win-lamps {
+        margin-bottom: 5px;
       }
-      .modal {
-        background: var(--panel);
-        padding: 25px;
-        border-radius: 20px;
-        text-align: center;
-        width: 85%;
-        max-width: 320px;
-        border: 1px solid #334155;
+      .lamp {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #334155;
+        margin: 0 3px;
+        border: 1px solid #475569;
       }
+      .lamp.active {
+        background: var(--win);
+        box-shadow: 0 0 10px var(--win);
+      }
+
+      /* ボタン・入力 */
       input {
         width: 90%;
         padding: 12px;
@@ -82,7 +113,6 @@
         border-radius: 8px;
         font-size: 18px;
         text-align: center;
-        letter-spacing: 2px;
       }
       .btn {
         background: var(--accent);
@@ -94,28 +124,21 @@
         cursor: pointer;
         width: 100%;
         font-size: 16px;
-        transition: opacity 0.2s;
+        margin-top: 10px;
       }
-      .btn:active {
-        opacity: 0.7;
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .btn-exit {
+        background: #ef4444;
       }
 
-      .status-bar {
-        font-size: 14px;
-        margin-top: 5px;
-        color: #38bdf8;
-        font-weight: bold;
-      }
       .ojama-bar {
         height: 20px;
         color: #ef4444;
         font-size: 16px;
         font-weight: bold;
-      }
-      .score-display {
-        font-size: 14px;
-        margin-top: 5px;
-        color: #94a3b8;
       }
       .ctrl-area {
         margin-top: 15px;
@@ -128,84 +151,122 @@
     </style>
   </head>
   <body>
-    <div id="connection-overlay">
-      <div class="modal">
-        <h2 style="margin: 0 0 10px 0">PUYOichi PvP</h2>
+    <div id="ui-overlay">
+      <div id="view-connect" class="modal">
+        <h2 style="margin: 0">PUYOichi Online</h2>
         <div
-          id="peer-id-display"
-          style="font-size: 20px; color: #38bdf8; font-weight: 800"
+          id="my-id-display"
+          style="
+            font-size: 22px;
+            color: #38bdf8;
+            font-weight: 800;
+            margin: 15px 0;
+          "
         >
-          ID: 生成中...
+          ID生成中...
         </div>
-        <p style="font-size: 12px; color: #94a3b8">
-          この数字を相手に伝えてください
-        </p>
-        <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0" />
         <input
           type="tel"
           id="target-id"
-          placeholder="相手の10桁IDを入力"
+          placeholder="相手のIDを入力"
           maxlength="10"
         />
         <button class="btn" id="connect-btn">対戦を申し込む</button>
       </div>
+
+      <div id="view-ready" class="modal" style="display: none">
+        <h2 id="ready-title">READY?</h2>
+        <p id="ready-status" style="color: #94a3b8">
+          相手の準備を待っています...
+        </p>
+        <button class="btn" id="ready-btn">準備OK！</button>
+      </div>
+
+      <div id="view-result" class="modal" style="display: none">
+        <h1 id="result-text" style="font-size: 48px; margin: 0">WIN</h1>
+        <p id="result-subtext" style="margin-bottom: 20px">
+          画面をタップして次へ
+        </p>
+        <div id="final-actions" style="display: none">
+          <button class="btn" id="rematch-btn">もう一度プレイ</button>
+          <button class="btn btn-exit" onclick="location.reload()">
+            部屋を抜ける
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div class="status-bar" id="game-status">対戦相手を待っています...</div>
+    <div id="countdown"></div>
 
     <div class="battle-container">
       <div class="field-wrapper my-field">
+        <div class="win-lamps" id="my-lamps">
+          <div class="lamp"></div>
+          <div class="lamp"></div>
+        </div>
         <div class="ojama-bar" id="my-ojama"></div>
         <canvas id="my-canvas" width="240" height="480"></canvas>
-        <div class="score-display" id="my-score">YOU: 0</div>
+        <div
+          style="font-size: 14px; color: #94a3b8; margin-top: 5px"
+          id="my-score"
+        >
+          YOU: 0
+        </div>
       </div>
 
       <div class="field-wrapper">
+        <div class="win-lamps" id="enemy-lamps">
+          <div class="lamp"></div>
+          <div class="lamp"></div>
+        </div>
         <div class="ojama-bar" id="enemy-ojama"></div>
         <canvas id="enemy-canvas" width="240" height="480"></canvas>
-        <div class="score-display" id="enemy-score">ENEMY: 0</div>
+        <div
+          style="font-size: 14px; color: #94a3b8; margin-top: 5px"
+          id="enemy-score"
+        >
+          ENEMY: 0
+        </div>
       </div>
     </div>
 
     <div class="ctrl-area">
-      <button class="btn" id="btn-l">←</button>
-      <button class="btn" id="btn-rot" style="background: #8b5cf6">ROT</button>
-      <button class="btn" id="btn-r">→</button>
+      <button class="btn" onclick="move(-1, 0, 0)">←</button>
+      <button class="btn" style="background: #8b5cf6" onclick="move(0, 0, 1)">
+        ROT
+      </button>
+      <button class="btn" onclick="move(1, 0, 0)">→</button>
       <button
         class="btn"
-        id="btn-down"
         style="grid-column: span 3; background: #1d4ed8"
+        onclick="quickDrop()"
       >
         QUICK DROP
       </button>
     </div>
 
     <script>
-      // --- 通信セクション (数字10桁・セッション管理) ---
       let peer, conn;
-      const overlay = document.getElementById("connection-overlay");
-      const myIdDisplay = document.getElementById("peer-id-display");
-      const targetIdInput = document.getElementById("target-id");
-      const connectBtn = document.getElementById("connect-btn");
-      const statusText = document.getElementById("game-status");
+      let myID = Math.floor(Math.random() * 9000000000 + 1000000000).toString();
+      let myWins = 0,
+        enemyWins = 0;
+      let isReady = false,
+        enemyReady = false;
+      let gameActive = false;
 
-      function generate10DigitID() {
-        return Math.floor(Math.random() * 9000000000 + 1000000000).toString();
-      }
-
-      const myID = generate10DigitID();
+      // 通信初期化
       peer = new Peer(myID);
-
-      peer.on("open", (id) => (myIdDisplay.innerText = `ID: ${id}`));
-      peer.on("error", () => location.reload());
-
+      peer.on(
+        "open",
+        (id) =>
+          (document.getElementById("my-id-display").innerText = "ID: " + id),
+      );
       peer.on("connection", (c) => {
         conn = c;
         initConn();
       });
-
-      connectBtn.onclick = () => {
-        const tid = targetIdInput.value.trim();
+      document.getElementById("connect-btn").onclick = () => {
+        const tid = document.getElementById("target-id").value;
         if (tid.length === 10) {
           conn = peer.connect(tid);
           initConn();
@@ -213,12 +274,12 @@
       };
 
       function initConn() {
-        conn.on("open", () => {
-          overlay.style.display = "none";
-          statusText.innerText = "READY! 接続完了";
-          startGame();
-        });
+        conn.on("open", () => showView("view-ready"));
         conn.on("data", (data) => {
+          if (data.type === "READY") {
+            enemyReady = true;
+            checkStart();
+          }
           if (data.type === "STATE") {
             enemyBoard = data.board;
             enemyScore = data.score;
@@ -226,34 +287,51 @@
             drawEnemy();
           }
           if (data.type === "ATTACK") pendingOjama += data.amount;
-        });
-        conn.on("close", () => {
-          alert("相手との接続が切れました");
-          location.reload();
+          if (data.type === "LOSE") handleWin(); // 相手が負けた通知＝自分の勝ち
+          if (data.type === "REMATCH") resetMatch();
         });
       }
 
-      function sync() {
-        if (conn && conn.open) {
-          conn.send({
-            type: "STATE",
-            board: board,
-            score: score,
-            ojama: pendingOjama,
-          });
+      function showView(id) {
+        document.getElementById("ui-overlay").style.display = "flex";
+        ["view-connect", "view-ready", "view-result"].forEach(
+          (v) => (document.getElementById(v).style.display = "none"),
+        );
+        document.getElementById(id).style.display = "block";
+      }
+
+      document.getElementById("ready-btn").onclick = () => {
+        isReady = true;
+        document.getElementById("ready-btn").disabled = true;
+        document.getElementById("ready-status").innerText =
+          "相手の準備を待っています...";
+        conn.send({ type: "READY" });
+        checkStart();
+      };
+
+      function checkStart() {
+        if (isReady && enemyReady) {
+          document.getElementById("ui-overlay").style.display = "none";
+          startCountdown();
         }
       }
 
-      function attack(n) {
-        if (conn && conn.open) conn.send({ type: "ATTACK", amount: n });
+      async function startCountdown() {
+        const cd = document.getElementById("countdown");
+        for (let i = 3; i > 0; i--) {
+          cd.innerText = i;
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+        cd.innerText = "GO!";
+        setTimeout(() => (cd.innerText = ""), 1000);
+        startGame();
       }
 
-      // --- ゲームエンジン ---
+      // ゲームエンジン
       const myCanvas = document.getElementById("my-canvas");
       const myCtx = myCanvas.getContext("2d");
       const enemyCanvas = document.getElementById("enemy-canvas");
       const enemyCtx = enemyCanvas.getContext("2d");
-
       const ROWS = 12,
         COLS = 6,
         SIZE = 40;
@@ -277,13 +355,89 @@
         "#94a3b8",
       ];
 
-      function initVars() {
+      function startGame() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         enemyBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         score = 0;
         enemyScore = 0;
         pendingOjama = 0;
         enemyOjama = 0;
+        activePuyo = new PuyoPair();
+        gameActive = true;
+        loop();
+      }
+
+      function handleWin() {
+        if (!gameActive) return;
+        gameActive = false;
+        myWins++;
+        updateLamps();
+        showResult("WIN");
+      }
+
+      function handleLose() {
+        if (!gameActive) return;
+        gameActive = false;
+        enemyWins++;
+        updateLamps();
+        conn.send({ type: "LOSE" });
+        showResult("LOSE");
+      }
+
+      function updateLamps() {
+        const myL = document.getElementById("my-lamps").children;
+        const enL = document.getElementById("enemy-lamps").children;
+        for (let i = 0; i < 2; i++) {
+          myL[i].className = i < myWins ? "lamp active" : "lamp";
+          enL[i].className = i < enemyWins ? "lamp active" : "lamp";
+        }
+      }
+
+      function showResult(res) {
+        const view = document.getElementById("view-result");
+        const txt = document.getElementById("result-text");
+        const sub = document.getElementById("result-subtext");
+        const actions = document.getElementById("final-actions");
+
+        showView("view-result");
+        txt.innerText = res;
+        txt.style.color = res === "WIN" ? "#eab308" : "#ef4444";
+
+        if (myWins >= 2 || enemyWins >= 2) {
+          sub.innerText = "最終決着！";
+          actions.style.display = "block";
+        } else {
+          sub.innerText = "画面をタップして次戦の準備へ";
+          actions.style.display = "none";
+          view.onclick = () => {
+            view.onclick = null;
+            nextMatchReady();
+          };
+        }
+      }
+
+      function nextMatchReady() {
+        isReady = false;
+        enemyReady = false;
+        document.getElementById("ready-btn").disabled = false;
+        document.getElementById("ready-status").innerText =
+          "お互いに準備ボタンを押してください";
+        showView("view-ready");
+      }
+
+      document.getElementById("rematch-btn").onclick = () => {
+        myWins = 0;
+        enemyWins = 0;
+        updateLamps();
+        conn.send({ type: "REMATCH" });
+        resetMatch();
+      };
+
+      function resetMatch() {
+        myWins = 0;
+        enemyWins = 0;
+        updateLamps();
+        nextMatchReady();
       }
 
       class PuyoPair {
@@ -303,76 +457,21 @@
         }
       }
 
-      function drawField(ctx, b, active = null) {
-        ctx.clearRect(0, 0, 240, 480);
-        b.forEach((row, y) =>
-          row.forEach((c, x) => {
-            if (c) drawCircle(ctx, x, y, c);
-          }),
-        );
-        if (active)
-          active.getPos().forEach((p) => drawCircle(ctx, p.x, p.y, p.c));
-      }
-
-      function drawCircle(ctx, x, y, c) {
-        ctx.fillStyle = COLORS[c];
-        ctx.beginPath();
-        ctx.arc(x * SIZE + 20, y * SIZE + 20, 18, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(255,255,255,0.2)";
-        ctx.stroke();
-      }
-
-      function drawEnemy() {
-        drawField(enemyCtx, enemyBoard);
-        document.getElementById("enemy-score").innerText =
-          `ENEMY: ${enemyScore}`;
-        document.getElementById("enemy-ojama").innerText = "⚠".repeat(
-          Math.min(enemyOjama, 6),
-        );
-      }
-
-      function canMove(p, dx, dy, dr = 0) {
-        const nr = (p.rot + dr + 4) % 4;
-        const test = { x: p.x + dx, y: p.y + dy, rot: nr, getPos: p.getPos };
-        return test
-          .getPos()
-          .every(
-            (pos) =>
-              pos.x >= 0 &&
-              pos.x < COLS &&
-              pos.y < ROWS &&
-              (pos.y < 0 || board[pos.y][pos.x] === 0),
-          );
-      }
-
-      async function startGame() {
-        initVars();
-        activePuyo = new PuyoPair();
-        loop();
-      }
-
-      async function loop() {
+      function loop() {
+        if (!gameActive) return;
         if (canMove(activePuyo, 0, 1)) {
           activePuyo.y++;
         } else {
           activePuyo.getPos().forEach((p) => {
             if (p.y >= 0) board[p.y][p.x] = p.c;
           });
-          await handleChain();
-          if (pendingOjama > 0) dropOjama();
-          activePuyo = new PuyoPair();
-          if (!canMove(activePuyo, 0, 0)) {
-            alert("GAME OVER!");
-            location.reload();
-            return;
-          }
+          handleChain().then(() => {
+            if (pendingOjama > 0) dropOjama();
+            activePuyo = new PuyoPair();
+            if (!canMove(activePuyo, 0, 0)) handleLose();
+          });
         }
-        drawField(myCtx, board, activePuyo);
-        document.getElementById("my-score").innerText = `YOU: ${score}`;
-        document.getElementById("my-ojama").innerText = "⚠".repeat(
-          Math.min(pendingOjama, 6),
-        );
+        draw();
         sync();
         setTimeout(loop, 600);
       }
@@ -391,19 +490,14 @@
                   falling = true;
                 }
               }
-            if (falling) {
-              drawField(myCtx, board);
-              await new Promise((r) => setTimeout(r, 50));
-            }
           }
-
           let matches = findMatches();
           if (matches.length === 0) break;
           chain++;
           matches.forEach((p) => (board[p.y][p.x] = 0));
           score += matches.length * 10 * chain;
-          if (chain >= 2) attack(chain * 3);
-          drawField(myCtx, board);
+          if (chain >= 2) conn.send({ type: "ATTACK", amount: chain * 3 });
+          draw();
           await new Promise((r) => setTimeout(r, 400));
         }
       }
@@ -414,8 +508,8 @@
         for (let y = 0; y < ROWS; y++)
           for (let x = 0; x < COLS; x++) {
             if (board[y][x] && board[y][x] !== 9 && !v[y][x]) {
-              let group = [],
-                color = board[y][x],
+              let color = board[y][x],
+                group = [],
                 q = [{ x, y }];
               while (q.length) {
                 let p = q.pop();
@@ -455,32 +549,89 @@
         }
       }
 
-      // 操作
+      function draw() {
+        myCtx.clearRect(0, 0, 240, 480);
+        board.forEach((row, y) =>
+          row.forEach((c, x) => {
+            if (c) drawCircle(myCtx, x, y, c);
+          }),
+        );
+        if (activePuyo)
+          activePuyo.getPos().forEach((p) => drawCircle(myCtx, p.x, p.y, p.c));
+        document.getElementById("my-score").innerText = `YOU: ${score}`;
+        document.getElementById("my-ojama").innerText = "⚠".repeat(
+          Math.min(pendingOjama, 6),
+        );
+      }
+
+      function drawEnemy() {
+        enemyCtx.clearRect(0, 0, 240, 480);
+        enemyBoard.forEach((row, y) =>
+          row.forEach((c, x) => {
+            if (c) drawCircle(enemyCtx, x, y, c);
+          }),
+        );
+        document.getElementById("enemy-score").innerText =
+          `ENEMY: ${enemyScore}`;
+        document.getElementById("enemy-ojama").innerText = "⚠".repeat(
+          Math.min(enemyOjama, 6),
+        );
+      }
+
+      function drawCircle(ctx, x, y, c) {
+        ctx.fillStyle = COLORS[c];
+        ctx.beginPath();
+        ctx.arc(x * SIZE + 20, y * SIZE + 20, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.stroke();
+      }
+
+      function sync() {
+        if (conn && conn.open)
+          conn.send({ type: "STATE", board, score, ojama: pendingOjama });
+      }
+
+      function canMove(p, dx, dy, dr = 0) {
+        const nr = (p.rot + dr + 4) % 4;
+        const ox = [0, 1, 0, -1][nr],
+          oy = [-1, 0, 1, 0][nr];
+        const pts = [
+          { x: p.x + dx, y: p.y + dy },
+          { x: p.x + dx + ox, y: p.y + dy + oy },
+        ];
+        return pts.every(
+          (pt) =>
+            pt.x >= 0 &&
+            pt.x < COLS &&
+            pt.y < ROWS &&
+            (pt.y < 0 || board[pt.y][pt.x] === 0),
+        );
+      }
+
       const move = (dx, dy, dr) => {
-        if (canMove(activePuyo, dx, dy, dr)) {
+        if (gameActive && canMove(activePuyo, dx, dy, dr)) {
           activePuyo.x += dx;
           activePuyo.y += dy;
           activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
-          drawField(myCtx, board, activePuyo);
+          draw();
           sync();
         }
       };
-      document.getElementById("btn-l").onclick = () => move(-1, 0, 0);
-      document.getElementById("btn-r").onclick = () => move(1, 0, 0);
-      document.getElementById("btn-rot").onclick = () => move(0, 0, 1);
-      document.getElementById("btn-down").onclick = () => {
-        while (canMove(activePuyo, 0, 1)) activePuyo.y++;
-        drawField(myCtx, board, activePuyo);
+      const quickDrop = () => {
+        if (gameActive) {
+          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
+          draw();
+          sync();
+        }
       };
+
       window.addEventListener("keydown", (e) => {
         if (e.key === "ArrowLeft") move(-1, 0, 0);
         if (e.key === "ArrowRight") move(1, 0, 0);
         if (e.key === "ArrowUp" || e.key === "z") move(0, 0, 1);
         if (e.key === "ArrowDown") move(0, 1, 0);
-        if (e.key === " ") {
-          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
-          drawField(myCtx, board, activePuyo);
-        }
+        if (e.key === " ") quickDrop();
       });
     </script>
   </body>
