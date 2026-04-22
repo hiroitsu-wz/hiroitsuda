@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>PUYOichi Portal</title>
+    <style>
+      body {
+        background: radial-gradient(circle at top right, #1e293b, #0f172a);
+        color: white;
+        font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        touch-action: none;
+      }
+      h1 {
+        font-size: 3.5rem;
+        color: #38bdf8;
+        text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        margin: 0;
+      }
+      p {
+        color: #94a3b8;
+        margin-bottom: 2rem;
+        letter-spacing: 1px;
+      }
+      .menu {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        width: 90%;
+        max-width: 320px;
+      }
+      .game-link {
+        display: block;
+        padding: 20px;
+        text-align: center;
+        text-decoration: none;
+        color: white;
+        font-weight: bold;
+        font-size: 1.1rem;
+        border-radius: 16px;
+        transition: all 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+      .game-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        filter: brightness(1.1);
+      }
+      .game-link:active {
+        transform: scale(0.95);
+      }
+      .btn-normal {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      }
+      .btn-tani {
+        background: linear-gradient(135deg, #ec4899, #be185d);
+      }
+      .btn-online {
+        background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>PUYOichi</h1>
+    <p>UNIVERSAL EDITION</p>
+    <div class="menu">
+      <a href="index_game.html" class="game-link btn-normal">通常プレイ</a>
+      <a href="index_game2.html" class="game-link btn-tani">Tani版 (Rich)</a>
+      <a href="puyo_tsuusin.html" class="game-link btn-online"
+        >通信プレイ (PvP)</a
+      >
+    </div>
+    <footer
+      style="
+        position: absolute;
+        bottom: 20px;
+        color: #475569;
+        font-size: 0.8rem;
+      "
+    >
+      © 2026 Tanizawa Projects
+    </footer>
+  </body>
+</html>
