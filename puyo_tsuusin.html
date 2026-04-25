@@ -7,67 +7,91 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
       :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --win: #eab308; --danger: #ef4444; }
-      body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; touch-action: none; overflow: hidden; height: 100dvh; }
       
+      /* 全体レイアウト：ズーム防止と高さ固定 */
+      * { touch-action: manipulation; box-sizing: border-box; }
+      body { 
+        margin: 0; background: var(--bg); color: white; font-family: sans-serif; 
+        display: flex; flex-direction: column; align-items: center; 
+        overflow: hidden; height: 100dvh; width: 100vw;
+      }
+
       #ui-overlay { position: absolute; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; }
       .modal { background: var(--panel); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; border: 2px solid #334155; }
       
-      .battle-container { display: flex; gap: 8px; margin-top: 5px; transform: scale(0.9); transform-origin: top; }
-      canvas { background: rgba(0, 0, 0, 0.6); border: 2px solid #475569; border-radius: 12px; width: 140px; height: 280px; }
-      .my-field canvas { border-color: var(--accent); width: 170px; height: 340px; box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+      /* バトルのメインエリア：画面高さに合わせて伸縮 */
+      .battle-container { 
+        display: flex; gap: 5px; flex: 1; min-height: 0; width: 100%; 
+        justify-content: center; align-items: center; padding: 10px;
+      }
+      .field-wrapper { display: flex; flex-direction: column; align-items: center; }
       
-      .next-panel { display: flex; flex-direction: column; gap: 8px; padding: 5px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; margin-left: 5px; }
-      .ojama-stock { height: 30px; font-size: 20px; text-align: left; display: flex; align-items: center; gap: 2px; overflow: hidden; }
+      /* キャンバス：スマホ画面に応じて縮小 */
+      canvas { background: rgba(0, 0, 0, 0.6); border: 2px solid #475569; border-radius: 8px; max-height: 50dvh; width: auto; aspect-ratio: 1/2; }
+      .my-field canvas { border-color: var(--accent); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
       
-      /* スマホ操作エリア */
-      .ctrl-area { position: fixed; bottom: 10px; width: 95%; max-width: 400px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
-      .btn { background: #334155; color: white; border: none; padding: 15px 5px; border-radius: 15px; font-weight: bold; font-size: 18px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      .next-panel { display: flex; flex-direction: column; gap: 5px; margin-left: 4px; }
+      .next-panel canvas { width: 30px; height: 60px; border: none; background: none; }
+      
+      .ojama-stock { height: 24px; font-size: 18px; text-align: left; display: flex; align-items: center; gap: 1px; width: 100%; overflow: hidden; }
+      
+      /* 操作パネル：下部に固定 */
+      .ctrl-area { 
+        width: 100%; max-width: 450px; display: grid; 
+        grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px;
+        background: rgba(30, 41, 59, 0.8); border-top: 1px solid #334155;
+      }
+      .btn { 
+        background: #334155; color: white; border: none; padding: 12px 0; 
+        border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
       .btn:active { background: #475569; transform: scale(0.95); }
       .btn-primary { background: var(--accent); }
       .btn-rotate { background: #8b5cf6; }
-      .btn-drop { background: #1d4ed8; grid-column: span 3; padding: 10px; font-size: 14px; }
+      .btn-drop { background: #1d4ed8; grid-column: span 3; font-size: 14px; padding: 8px; }
 
-      #countdown { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 100px; font-weight: 900; z-index: 500; text-shadow: 0 0 20px black; pointer-events: none; color: var(--win); }
-      #status-msg { margin-bottom: 10px; color: #94a3b8; font-size: 14px; }
+      #countdown { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; font-weight: 900; z-index: 500; pointer-events: none; color: var(--win); }
+      .score-label { font-size: 12px; margin-top: 2px; font-weight: bold; }
     </style>
   </head>
   <body>
     <div id="ui-overlay">
       <div id="view-connect" class="modal">
         <h2 style="margin-top:0">PUYOichi Pro</h2>
-        <div id="my-id-display" style="font-size: 18px; color: #38bdf8; margin: 15px 0; font-weight:bold; letter-spacing: 1px;">ID発行中...</div>
-        <input type="tel" id="target-id" placeholder="相手のIDを入力" maxlength="10" style="width: 90%; padding: 12px; text-align: center; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 18px;" />
-        <button class="btn btn-primary" id="connect-btn" style="margin-top:20px">対戦を申し込む</button>
+        <div id="my-id-display" style="font-size: 16px; color: #38bdf8; margin: 10px 0; font-weight:bold;">ID発行中...</div>
+        <input type="tel" id="target-id" placeholder="相手のIDを入力" maxlength="10" style="width: 90%; padding: 10px; text-align: center; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white;" />
+        <button class="btn btn-primary" id="connect-btn" style="margin-top:15px; width: 100%;">対戦を申し込む</button>
       </div>
       <div id="view-ready" class="modal" style="display: none">
         <h2>READY?</h2>
-        <div id="status-msg">接続完了！準備ができたら押してください</div>
-        <button class="btn btn-primary" id="ready-btn">準備OK！</button>
+        <div id="status-msg" style="font-size: 14px; color: #94a3b8; margin-bottom: 10px;">接続完了！</div>
+        <button class="btn btn-primary" id="ready-btn" style="width: 100%;">準備OK！</button>
       </div>
       <div id="view-result" class="modal" style="display: none">
-        <h1 id="result-text" style="font-size: 40px; margin: 10px 0;">WIN</h1>
-        <button class="btn btn-primary" onclick="location.reload()">タイトルへ戻る</button>
+        <h1 id="result-text" style="font-size: 32px;">WIN</h1>
+        <button class="btn btn-primary" onclick="location.reload()" style="width: 100%;">タイトルへ</button>
       </div>
     </div>
 
     <div id="countdown"></div>
 
     <div class="battle-container">
-      <div class="field-wrapper my-field" style="display: flex">
-        <div>
-          <div class="ojama-stock" id="my-ojama-bar"></div>
+      <div class="field-wrapper my-field">
+        <div class="ojama-stock" id="my-ojama-bar"></div>
+        <div style="display: flex; align-items: flex-start;">
           <canvas id="my-canvas" width="240" height="480"></canvas>
-          <div id="my-score" style="font-size: 14px; margin-top:5px">YOU: 0</div>
+          <div class="next-panel">
+            <canvas id="my-next1" width="40" height="80"></canvas>
+            <canvas id="my-next2" width="40" height="80"></canvas>
+          </div>
         </div>
-        <div class="next-panel">
-          <canvas id="my-next1" width="40" height="80" style="width: 30px; height: 60px"></canvas>
-          <canvas id="my-next2" width="40" height="80" style="width: 30px; height: 60px"></canvas>
-        </div>
+        <div id="my-score" class="score-label">YOU: 0</div>
       </div>
       <div class="field-wrapper">
         <div class="ojama-stock" id="enemy-ojama-bar"></div>
         <canvas id="enemy-canvas" width="240" height="480"></canvas>
-        <div id="enemy-score" style="font-size: 14px; margin-top:5px">ENEMY: 0</div>
+        <div id="enemy-score" class="score-label">ENEMY: 0</div>
       </div>
     </div>
 
@@ -75,18 +99,13 @@
       <button class="btn btn-rotate" onpointerdown="handleInput('rotL')">左回転</button>
       <button class="btn" onpointerdown="handleInput('up')">↑</button>
       <button class="btn btn-rotate" onpointerdown="handleInput('rotR')">右回転</button>
-      
       <button class="btn" onpointerdown="handleInput('left')">←</button>
       <button class="btn" onpointerdown="handleInput('down')">↓</button>
       <button class="btn" onpointerdown="handleInput('right')">→</button>
-      
       <button class="btn btn-drop" onpointerdown="handleInput('drop')">QUICK DROP (SPACE)</button>
     </div>
 
     <script>
-      // 音声ダミー（エラー回避）
-      function playSound(s) {} 
-
       let peer, conn, myID = Math.floor(1e9 + Math.random() * 9e8).toString();
       let gameActive = false, isProcessing = false, isHost = false;
       const ROWS = 12, COLS = 6, SIZE = 40, DEAD_X = 2, DEAD_Y = 0;
@@ -125,15 +144,8 @@
           document.getElementById("view-ready").style.display = "block";
         });
         conn.on("data", data => {
-          if (data.type === "READY") { 
-            enemyReady = true; 
-            document.getElementById("status-msg").innerText = "相手の準備が完了しました！";
-            checkStartCondition(); 
-          }
-          if (data.type === "START_SIGNAL") { 
-            sharedColors = data.colors;
-            startCountdown(); 
-          }
+          if (data.type === "READY") { enemyReady = true; checkStartCondition(); }
+          if (data.type === "START_SIGNAL") { sharedColors = data.colors; startCountdown(); }
           if (data.type === "STATE") { enemyBoard = data.board; enemyScore = data.score; enemyOjama = data.ojama; drawEnemy(); }
           if (data.type === "ATTACK") { myOjama += data.amount; updateOjamaUI(); }
           if (data.type === "LOSE") finishRound("WIN");
@@ -142,7 +154,6 @@
 
       function checkStartCondition() {
         if (isReady && enemyReady && isHost) {
-          // ホストが色を決めて開始合図を送る
           sharedColors = Array.from({length:300}, () => [Math.floor(Math.random()*5)+1, Math.floor(Math.random()*5)+1]);
           conn.send({type: "START_SIGNAL", colors: sharedColors});
           startCountdown();
@@ -150,24 +161,21 @@
       }
 
       document.getElementById("ready-btn").onclick = () => { 
-        isReady = true; 
-        document.getElementById("ready-btn").disabled = true; 
-        document.getElementById("ready-btn").innerText = "待機中...";
-        conn.send({ type: "READY" }); 
-        checkStartCondition(); 
+        isReady = true; document.getElementById("ready-btn").disabled = true;
+        conn.send({ type: "READY" }); checkStartCondition(); 
       };
 
       async function startCountdown() {
         document.getElementById("ui-overlay").style.display = "none";
         const cd = document.getElementById("countdown");
         for (let i = 3; i > 0; i--) { cd.innerText = i; await new Promise(r => setTimeout(r, 1000)); }
-        cd.innerText = "GO!"; setTimeout(() => cd.innerText = "", 1000); 
+        cd.innerText = "GO!"; setTimeout(() => cd.innerText = "", 800); 
         startGame();
       }
 
       function startGame() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        colorIdx = 0;
+        colorIdx = 0; score = 0; myOjama = 0;
         nextPuyos = [sharedColors[colorIdx++], sharedColors[colorIdx++], sharedColors[colorIdx++]];
         spawnPuyo(); gameActive = true; update(); gameLoop();
       }
@@ -188,20 +196,20 @@
 
       function handleInput(type) {
         if (!gameActive || isProcessing) return;
-        if (type === "left" && canMove(activePuyo, -1, 0)) { activePuyo.x--; lockDelay = 0; }
-        if (type === "right" && canMove(activePuyo, 1, 0)) { activePuyo.x++; lockDelay = 0; }
-        if (type === "down" && canMove(activePuyo, 0, 1)) { activePuyo.y++; }
+        if (type === "left" && canMove(activePuyo, -1, 0)) activePuyo.x--;
+        if (type === "right" && canMove(activePuyo, 1, 0)) activePuyo.x++;
+        if (type === "down" && canMove(activePuyo, 0, 1)) activePuyo.y++;
         if (type === "up" || type === "rotR") {
-          if (canMove(activePuyo, 0, 0, 1)) { activePuyo.rot = (activePuyo.rot + 1) % 4; lockDelay = 0; }
-          else if (canMove(activePuyo, -1, 0, 1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 1) % 4; lockDelay = 0; }
-          else if (canMove(activePuyo, 1, 0, 1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 1) % 4; lockDelay = 0; }
+          if (canMove(activePuyo, 0, 0, 1)) activePuyo.rot = (activePuyo.rot + 1) % 4;
+          else if (canMove(activePuyo, -1, 0, 1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 1) % 4; }
+          else if (canMove(activePuyo, 1, 0, 1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 1) % 4; }
         }
         if (type === "rotL") {
-          if (canMove(activePuyo, 0, 0, -1)) { activePuyo.rot = (activePuyo.rot + 3) % 4; lockDelay = 0; }
-          else if (canMove(activePuyo, -1, 0, -1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 3) % 4; lockDelay = 0; }
-          else if (canMove(activePuyo, 1, 0, -1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 3) % 4; lockDelay = 0; }
+          if (canMove(activePuyo, 0, 0, -1)) activePuyo.rot = (activePuyo.rot + 3) % 4;
+          else if (canMove(activePuyo, -1, 0, -1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 3) % 4; }
+          else if (canMove(activePuyo, 1, 0, -1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 3) % 4; }
         }
-        if (type === "drop") { while (canMove(activePuyo, 0, 1)) activePuyo.y++; lockDelay = 1000; }
+        if (type === "drop") { while (canMove(activePuyo, 0, 1)) activePuyo.y++; lockDelay = 800; }
         sync();
       }
 
@@ -212,12 +220,12 @@
             activePuyo.y++;
             lockDelay = 0;
           } else {
-            lockDelay += 400; // 猶予
+            lockDelay += 400;
             if (lockDelay >= 800) {
               isProcessing = true;
               activePuyo.getPos().forEach(p => { if (p.y >= 0) board[p.y][p.x] = p.c; });
               await handleChain();
-              if (myOjama > 0) await dropOjama();
+              if (myOjama > 0) await dropOjamaAnim();
               spawnPuyo(); isProcessing = false; lockDelay = 0;
             }
           }
@@ -243,26 +251,58 @@
           const matches = findMatches();
           if (matches.length === 0) break;
           chain++;
-          
           matches.forEach(p => { 
             spawnParticles(p.x, p.y, COLORS[board[p.y][p.x]]);
-            // 周囲のおじゃまも消す
             [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
               let nx = p.x + dx, ny = p.y + dy;
               if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && board[ny][nx] === 9) board[ny][nx] = 0;
             });
             board[p.y][p.x] = 0; 
           });
-
           let power = Math.floor((matches.length * 10) * (chainBonus[Math.min(chain, 10)] || 300) / 70);
           if (myOjama > 0) { let off = Math.min(myOjama, power); myOjama -= off; power -= off; }
           if (power > 0) conn.send({ type: "ATTACK", amount: power });
-          
           score += matches.length * 10 * chain; 
-          updateOjamaUI();
-          sync();
+          updateOjamaUI(); sync();
           await new Promise(r => setTimeout(r, 450));
         }
+      }
+
+      // おじゃまぷよ落下アニメーション
+      async function dropOjamaAnim() {
+        let count = Math.min(myOjama, 30); myOjama -= count;
+        updateOjamaUI();
+        let fallingOjama = [];
+        let cols = [0,1,2,3,4,5].sort(() => Math.random() - 0.5);
+        
+        for(let i=0; i<count; i++) {
+          let x = cols[i % 6];
+          fallingOjama.push({ x, y: -1 - Math.floor(i/6), targetY: -1 });
+          // 各列の着地点を探す
+          for(let ty=ROWS-1; ty>=0; ty--) {
+            if(board[ty][x] === 0) {
+              let alreadyInLine = fallingOjama.filter(o => o.x === x && o.targetY !== -1).length;
+              fallingOjama[i].targetY = ty - alreadyInLine;
+              break;
+            }
+          }
+        }
+
+        // 落下プロセス
+        for(let step = 0; step < 15; step++) {
+          fallingOjama.forEach(o => { if(o.y < o.targetY) o.y += 0.5; });
+          drawWithOjama(fallingOjama);
+          await new Promise(r => setTimeout(r, 30));
+        }
+        
+        fallingOjama.forEach(o => { if(o.targetY >= 0) board[o.targetY][o.x] = 9; });
+        updateOjamaUI();
+      }
+
+      function drawWithOjama(falling) {
+        myCtx.clearRect(0, 0, 240, 480);
+        board.forEach((row, y) => row.forEach((c, x) => { if (c) drawPuyo(myCtx, x, y, c); }));
+        falling.forEach(o => drawPuyo(myCtx, o.x, o.y, 9));
       }
 
       function findMatches() {
@@ -284,34 +324,17 @@
         return matched;
       }
 
-      async function dropOjama() {
-        let count = Math.min(myOjama, 30); myOjama -= count;
-        while(count > 0) {
-          let line = Math.min(count, 6);
-          let cols = [0,1,2,3,4,5].sort(() => Math.random() - 0.5);
-          for(let i=0; i<line; i++) {
-            let x = cols[i];
-            for(let y=0; y<ROWS; y++) { if(board[y][x] === 0) { board[y][x] = 9; break; } }
-          }
-          count -= line;
-          await new Promise(r => setTimeout(r, 100));
-        }
-        updateOjamaUI();
-      }
-
       function spawnParticles(x, y, color) {
         for (let i = 0; i < 5; i++) particles.push({ x: x * SIZE + 20, y: y * SIZE + 20, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10, c: color, life: 1 });
       }
 
       function update() {
+        if(isProcessing) return; // 落下アニメ中は描画をスキップ
         myCtx.clearRect(0, 0, 240, 480);
         board?.forEach((row, y) => row.forEach((c, x) => { if (c) drawPuyo(myCtx, x, y, c); }));
         if (activePuyo) activePuyo.getPos().forEach(p => drawPuyo(myCtx, p.x, p.y, p.c));
-        
-        myCtx.fillStyle = "rgba(255,255,255,0.3)";
-        myCtx.font = "bold 20px Arial";
+        myCtx.fillStyle = "rgba(255,255,255,0.3)"; myCtx.font = "bold 20px Arial";
         myCtx.fillText("×", DEAD_X * SIZE + 12, DEAD_Y * SIZE + 30);
-
         [n1Ctx, n2Ctx].forEach((ctx, i) => {
           ctx.clearRect(0, 0, 40, 80); drawPuyo(ctx, 0, 1, nextPuyos[i][0], 20); drawPuyo(ctx, 0, 0, nextPuyos[i][1], 20);
         });
@@ -332,6 +355,7 @@
       }
 
       function drawPuyo(ctx, x, y, c, s = 40) {
+        if(y < 0 && c !== 9) return; // 盤面外は描画しない（おじゃま落下中以外）
         ctx.fillStyle = c === 9 ? "#94a3b8" : COLORS[c];
         ctx.beginPath(); ctx.roundRect(x * s + 2, y * s + 2, s - 4, s - 4, s/2); ctx.fill();
         ctx.fillStyle = "rgba(255,255,255,0.4)";
@@ -341,7 +365,7 @@
       function updateOjamaUI() {
         const buildIcons = (num) => {
           let big = Math.floor(num / 10); let small = num % 10;
-          return `<span style="color:#cbd5e1;font-size:24px">●</span>`.repeat(big) + `<span style="color:#94a3b8;font-size:14px">●</span>`.repeat(small);
+          return `<span style="color:#cbd5e1;font-size:20px">●</span>`.repeat(big) + `<span style="color:#94a3b8;font-size:12px">●</span>`.repeat(small);
         };
         document.getElementById("my-ojama-bar").innerHTML = myOjama > 0 ? buildIcons(myOjama) : "";
         document.getElementById("enemy-ojama-bar").innerHTML = enemyOjama > 0 ? buildIcons(enemyOjama) : "";
@@ -350,8 +374,7 @@
       function sync() { if (conn?.open) conn.send({ type: "STATE", board, score, ojama: myOjama }); }
       
       function finishRound(res) { 
-        if (!gameActive) return; 
-        gameActive = false; 
+        if (!gameActive) return; gameActive = false;
         if (res === "LOSE") conn.send({ type: "LOSE" }); 
         document.getElementById("ui-overlay").style.display = "flex"; 
         document.getElementById("view-result").style.display = "block"; 
