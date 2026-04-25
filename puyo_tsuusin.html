@@ -6,7 +6,6 @@
     <title>PUYOichi Online Ultimate</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-      /* スタイル設定（既存のもの） */
       html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #0f172a; touch-action: none; color: white; font-family: "Segoe UI", sans-serif; display: flex; flex-direction: column; align-items: center; }
       .moon { position: absolute; width: 400px; height: 200px; filter: blur(60px); z-index: -1; opacity: 0.2; border-radius: 50%; top: -50px; right: -100px; background: linear-gradient(to bottom, #38bdf8, #818cf8); }
       #ui-overlay { position: absolute; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; }
@@ -86,7 +85,6 @@
     </div>
 
     <script>
-      // --- 音声・定数 ---
       const se = {
         pop: new Audio("puyo_pop.mp3"),
         move: new Audio("puyo_move.mp3"),
@@ -101,8 +99,6 @@
       let nextQueue = [], fallingOjamas = [];
       let gameActive = false, isProcessing = false;
       let amIReady = false, isEnemyReady = false;
-      
-      // 2点先取用変数
       let myWins = 0, enemyWins = 0;
       const WIN_GOAL = 2;
 
@@ -148,21 +144,29 @@
         checkStart();
       };
 
-      // 次の試合へボタン
       document.getElementById("next-match-btn").onclick = () => {
         play("btn");
         amIReady = true;
-        document.getElementById("next-match-btn").disabled = true;
-        document.getElementById("next-match-btn").innerText = "相手を待っています...";
+        // リザルトを隠して待機画面へ（ID入力画面には戻さない）
+        document.getElementById("view-result").style.display = "none";
+        document.getElementById("view-ready").style.display = "block";
+        document.getElementById("ready-status").innerText = "NEXT MATCH";
+        document.getElementById("sync-msg").innerText = "相手の準備を待っています...";
+        document.getElementById("ready-btn").style.display = "none"; // 準備完了ボタンは不要
+
         conn.send({ type: "NEXT_MATCH_READY" });
         checkStart();
       };
 
       function checkStart() {
         if (amIReady && isEnemyReady) {
-          amIReady = false; isEnemyReady = false; // フラグリセット
-          document.getElementById("next-match-btn").disabled = false;
-          document.getElementById("next-match-btn").innerText = "次の試合へ";
+          amIReady = false; 
+          isEnemyReady = false;
+          // UIを初期化
+          document.getElementById("view-ready").style.display = "none";
+          document.getElementById("ready-btn").style.display = "block";
+          document.getElementById("ready-btn").disabled = false;
+          document.getElementById("ready-btn").innerText = "準備完了";
           startGame();
         }
       }
@@ -192,12 +196,11 @@
         sync();
       }
 
-      // 落下スピード管理用のインターバルを制御
-      let gravityInterval = setInterval(() => {
-          if (gameActive && !isProcessing) {
-            if (canMove(0, 1, 0, activePuyo)) { activePuyo.y++; sync(); } 
-            else { lockPuyo(); }
-          }
+      setInterval(() => {
+        if (gameActive && !isProcessing) {
+          if (canMove(0, 1, 0, activePuyo)) { activePuyo.y++; sync(); } 
+          else { lockPuyo(); }
+        }
       }, 800);
 
       function canMove(dx, dy, dr, p) {
@@ -371,7 +374,7 @@
         const rematchBtn = document.getElementById("rematch-btn");
 
         matchResult.innerText = res === "WIN" ? "YOU WIN!" : "YOU LOSE...";
-        matchStatus.innerText = `${myWins} - ${enemyWins}`;
+        matchStatus.innerText = `★ ${myWins} - ${enemyWins} ★`;
 
         if (myWins >= WIN_GOAL || enemyWins >= WIN_GOAL) {
             matchResult.innerText = myWins >= WIN_GOAL ? "👑 MATCH WINNER 👑" : "MATCH OVER...";
@@ -379,6 +382,8 @@
             rematchBtn.style.display = "block";
         } else {
             nextBtn.style.display = "block";
+            nextBtn.disabled = false;
+            nextBtn.innerText = "次の試合へ";
             rematchBtn.style.display = "none";
         }
 
@@ -386,7 +391,6 @@
         document.getElementById("ui-overlay").style.display = "flex";
       }
 
-      // --- ボタン・キーボード操作の割り当て ---
       const setupBtn = (id, type) => {
         const el = document.getElementById(id);
         el.onpointerdown = (e) => { e.preventDefault(); handleInput(type); };
@@ -401,9 +405,9 @@
         if (e.key === "ArrowLeft") handleInput("left");
         if (e.key === "ArrowRight") handleInput("right");
         if (e.key === "ArrowDown") handleInput("down");
-        if (e.key === "ArrowUp") handleInput("rotL"); // 上ボタン：左回転
-        if (e.key === "Shift") handleInput("rotR");    // Shiftキー：右回転
-        if (e.key === " ") handleInput("up");         // スペース：クイックドロップ
+        if (e.key === "ArrowUp") handleInput("rotL"); 
+        if (e.key === "Shift") handleInput("rotR");    
+        if (e.key === " ") handleInput("up");         
       };
     </script>
   </body>
