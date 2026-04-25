@@ -3,54 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>PUYOichi Online Pro Max</title>
+    <title>PUYOichi Pro Max - 2 Wins Match</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
       :root { --bg: #0f172a; --panel: #1e293b; --accent: #3b82f6; --win: #eab308; --danger: #ef4444; }
-      
-      /* 全体レイアウト：ズーム防止と高さ固定 */
       * { touch-action: manipulation; box-sizing: border-box; }
       body { 
         margin: 0; background: var(--bg); color: white; font-family: sans-serif; 
         display: flex; flex-direction: column; align-items: center; 
         overflow: hidden; height: 100dvh; width: 100vw;
       }
-
       #ui-overlay { position: absolute; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; }
       .modal { background: var(--panel); padding: 25px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; border: 2px solid #334155; }
-      
-      /* バトルのメインエリア：画面高さに合わせて伸縮 */
-      .battle-container { 
-        display: flex; gap: 5px; flex: 1; min-height: 0; width: 100%; 
-        justify-content: center; align-items: center; padding: 10px;
-      }
+      .battle-container { display: flex; gap: 5px; flex: 1; min-height: 0; width: 100%; justify-content: center; align-items: center; padding: 10px; }
       .field-wrapper { display: flex; flex-direction: column; align-items: center; }
-      
-      /* キャンバス：スマホ画面に応じて縮小 */
       canvas { background: rgba(0, 0, 0, 0.6); border: 2px solid #475569; border-radius: 8px; max-height: 50dvh; width: auto; aspect-ratio: 1/2; }
       .my-field canvas { border-color: var(--accent); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
-      
       .next-panel { display: flex; flex-direction: column; gap: 5px; margin-left: 4px; }
       .next-panel canvas { width: 30px; height: 60px; border: none; background: none; }
-      
       .ojama-stock { height: 24px; font-size: 18px; text-align: left; display: flex; align-items: center; gap: 1px; width: 100%; overflow: hidden; }
-      
-      /* 操作パネル：下部に固定 */
-      .ctrl-area { 
-        width: 100%; max-width: 450px; display: grid; 
-        grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px;
-        background: rgba(30, 41, 59, 0.8); border-top: 1px solid #334155;
-      }
-      .btn { 
-        background: #334155; color: white; border: none; padding: 12px 0; 
-        border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-      }
+      .win-dots { display: flex; gap: 5px; margin-bottom: 5px; }
+      .dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid #475569; }
+      .dot.filled { background: var(--win); border-color: var(--win); box-shadow: 0 0 5px var(--win); }
+      .ctrl-area { width: 100%; max-width: 450px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px; background: rgba(30, 41, 59, 0.8); border-top: 1px solid #334155; }
+      .btn { background: #334155; color: white; border: none; padding: 12px 0; border-radius: 12px; font-weight: bold; font-size: 18px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
       .btn:active { background: #475569; transform: scale(0.95); }
       .btn-primary { background: var(--accent); }
       .btn-rotate { background: #8b5cf6; }
       .btn-drop { background: #1d4ed8; grid-column: span 3; font-size: 14px; padding: 8px; }
-
       #countdown { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; font-weight: 900; z-index: 500; pointer-events: none; color: var(--win); }
       .score-label { font-size: 12px; margin-top: 2px; font-weight: bold; }
     </style>
@@ -64,13 +44,17 @@
         <button class="btn btn-primary" id="connect-btn" style="margin-top:15px; width: 100%;">対戦を申し込む</button>
       </div>
       <div id="view-ready" class="modal" style="display: none">
-        <h2>READY?</h2>
+        <h2 id="ready-title">READY?</h2>
         <div id="status-msg" style="font-size: 14px; color: #94a3b8; margin-bottom: 10px;">接続完了！</div>
         <button class="btn btn-primary" id="ready-btn" style="width: 100%;">準備OK！</button>
       </div>
       <div id="view-result" class="modal" style="display: none">
-        <h1 id="result-text" style="font-size: 32px;">WIN</h1>
-        <button class="btn btn-primary" onclick="location.reload()" style="width: 100%;">タイトルへ</button>
+        <h1 id="result-text" style="font-size: 32px; margin-bottom: 5px;">WIN</h1>
+        <div id="win-count-display" style="margin-bottom: 20px; color: #94a3b8;">0 - 0</div>
+        <div id="result-buttons">
+           <button class="btn btn-primary" id="next-round-btn" style="width: 100%; margin-bottom: 10px;">NEXT ROUND</button>
+           <button class="btn" onclick="location.reload()" style="width: 100%; background: #475569;">QUIT</button>
+        </div>
       </div>
     </div>
 
@@ -78,6 +62,9 @@
 
     <div class="battle-container">
       <div class="field-wrapper my-field">
+        <div class="win-dots" id="my-win-dots">
+          <div class="dot"></div><div class="dot"></div>
+        </div>
         <div class="ojama-stock" id="my-ojama-bar"></div>
         <div style="display: flex; align-items: flex-start;">
           <canvas id="my-canvas" width="240" height="480"></canvas>
@@ -89,6 +76,9 @@
         <div id="my-score" class="score-label">YOU: 0</div>
       </div>
       <div class="field-wrapper">
+        <div class="win-dots" id="enemy-win-dots">
+          <div class="dot"></div><div class="dot"></div>
+        </div>
         <div class="ojama-stock" id="enemy-ojama-bar"></div>
         <canvas id="enemy-canvas" width="240" height="480"></canvas>
         <div id="enemy-score" class="score-label">ENEMY: 0</div>
@@ -102,12 +92,35 @@
       <button class="btn" onpointerdown="handleInput('left')">←</button>
       <button class="btn" onpointerdown="handleInput('down')">↓</button>
       <button class="btn" onpointerdown="handleInput('right')">→</button>
-      <button class="btn btn-drop" onpointerdown="handleInput('drop')">QUICK DROP (SPACE)</button>
+      <button class="btn btn-drop" onpointerdown="handleInput('drop')">QUICK DROP</button>
     </div>
 
     <script>
+      // --- 音声システム ---
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      function playSound(freq, type, duration) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + duration);
+      }
+      const sounds = {
+        move: () => playSound(440, 'sine', 0.05),
+        rotate: () => playSound(523, 'sine', 0.05),
+        drop: () => playSound(220, 'square', 0.1),
+        match: (c) => playSound(600 + c * 100, 'triangle', 0.3),
+        win: () => { playSound(523, 'sine', 0.2); setTimeout(()=>playSound(659, 'sine', 0.2), 150); setTimeout(()=>playSound(784, 'sine', 0.4), 300); },
+        lose: () => { playSound(392, 'sawtooth', 0.2); setTimeout(()=>playSound(349, 'sawtooth', 0.2), 150); setTimeout(()=>playSound(329, 'sawtooth', 0.4), 300); }
+      };
+
+      // --- ゲーム変数 ---
       let peer, conn, myID = Math.floor(1e9 + Math.random() * 9e8).toString();
       let gameActive = false, isProcessing = false, isHost = false;
+      let myWins = 0, enemyWins = 0;
       const ROWS = 12, COLS = 6, SIZE = 40, DEAD_X = 2, DEAD_Y = 0;
       const COLORS = [null, "#ef4444", "#22c55e", "#3b82f6", "#eab308", "#a855f7"];
       let board, enemyBoard, activePuyo, nextPuyos = [], score = 0, enemyScore = 0, myOjama = 0, enemyOjama = 0;
@@ -143,6 +156,7 @@
           document.getElementById("view-connect").style.display = "none";
           document.getElementById("view-ready").style.display = "block";
         });
+        conn.on("close", () => alert("相手が退出しました。"));
         conn.on("data", data => {
           if (data.type === "READY") { enemyReady = true; checkStartCondition(); }
           if (data.type === "START_SIGNAL") { sharedColors = data.colors; startCountdown(); }
@@ -154,28 +168,30 @@
 
       function checkStartCondition() {
         if (isReady && enemyReady && isHost) {
-          sharedColors = Array.from({length:300}, () => [Math.floor(Math.random()*5)+1, Math.floor(Math.random()*5)+1]);
+          sharedColors = Array.from({length:600}, () => [Math.floor(Math.random()*5)+1, Math.floor(Math.random()*5)+1]);
           conn.send({type: "START_SIGNAL", colors: sharedColors});
           startCountdown();
         }
       }
 
       document.getElementById("ready-btn").onclick = () => { 
-        isReady = true; document.getElementById("ready-btn").disabled = true;
+        isReady = true; 
+        document.getElementById("ready-btn").disabled = true;
+        document.getElementById("ready-btn").innerText = "WAITING...";
         conn.send({ type: "READY" }); checkStartCondition(); 
       };
 
       async function startCountdown() {
         document.getElementById("ui-overlay").style.display = "none";
         const cd = document.getElementById("countdown");
-        for (let i = 3; i > 0; i--) { cd.innerText = i; await new Promise(r => setTimeout(r, 1000)); }
-        cd.innerText = "GO!"; setTimeout(() => cd.innerText = "", 800); 
+        for (let i = 3; i > 0; i--) { cd.innerText = i; playSound(880, 'sine', 0.1); await new Promise(r => setTimeout(r, 1000)); }
+        cd.innerText = "GO!"; playSound(1760, 'sine', 0.3); setTimeout(() => cd.innerText = "", 800); 
         startGame();
       }
 
       function startGame() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        colorIdx = 0; score = 0; myOjama = 0;
+        colorIdx = 0; score = 0; myOjama = 0; enemyOjama = 0;
         nextPuyos = [sharedColors[colorIdx++], sharedColors[colorIdx++], sharedColors[colorIdx++]];
         spawnPuyo(); gameActive = true; update(); gameLoop();
       }
@@ -196,30 +212,30 @@
 
       function handleInput(type) {
         if (!gameActive || isProcessing) return;
-        if (type === "left" && canMove(activePuyo, -1, 0)) activePuyo.x--;
-        if (type === "right" && canMove(activePuyo, 1, 0)) activePuyo.x++;
-        if (type === "down" && canMove(activePuyo, 0, 1)) activePuyo.y++;
+        if (type === "left" && canMove(activePuyo, -1, 0)) { activePuyo.x--; sounds.move(); }
+        if (type === "right" && canMove(activePuyo, 1, 0)) { activePuyo.x++; sounds.move(); }
+        if (type === "down" && canMove(activePuyo, 0, 1)) { activePuyo.y++; }
         if (type === "up" || type === "rotR") {
+          sounds.rotate();
           if (canMove(activePuyo, 0, 0, 1)) activePuyo.rot = (activePuyo.rot + 1) % 4;
           else if (canMove(activePuyo, -1, 0, 1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 1) % 4; }
           else if (canMove(activePuyo, 1, 0, 1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 1) % 4; }
         }
         if (type === "rotL") {
+          sounds.rotate();
           if (canMove(activePuyo, 0, 0, -1)) activePuyo.rot = (activePuyo.rot + 3) % 4;
           else if (canMove(activePuyo, -1, 0, -1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 3) % 4; }
           else if (canMove(activePuyo, 1, 0, -1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 3) % 4; }
         }
-        if (type === "drop") { while (canMove(activePuyo, 0, 1)) activePuyo.y++; lockDelay = 800; }
+        if (type === "drop") { sounds.drop(); while (canMove(activePuyo, 0, 1)) activePuyo.y++; lockDelay = 800; }
         sync();
       }
 
       async function gameLoop() {
         if (!gameActive) return;
         if (!isProcessing) {
-          if (canMove(activePuyo, 0, 1)) {
-            activePuyo.y++;
-            lockDelay = 0;
-          } else {
+          if (canMove(activePuyo, 0, 1)) { activePuyo.y++; lockDelay = 0; }
+          else {
             lockDelay += 400;
             if (lockDelay >= 800) {
               isProcessing = true;
@@ -250,7 +266,7 @@
           }
           const matches = findMatches();
           if (matches.length === 0) break;
-          chain++;
+          chain++; sounds.match(chain);
           matches.forEach(p => { 
             spawnParticles(p.x, p.y, COLORS[board[p.y][p.x]]);
             [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
@@ -268,41 +284,31 @@
         }
       }
 
-      // おじゃまぷよ落下アニメーション
       async function dropOjamaAnim() {
         let count = Math.min(myOjama, 30); myOjama -= count;
         updateOjamaUI();
         let fallingOjama = [];
         let cols = [0,1,2,3,4,5].sort(() => Math.random() - 0.5);
-        
         for(let i=0; i<count; i++) {
           let x = cols[i % 6];
-          fallingOjama.push({ x, y: -1 - Math.floor(i/6), targetY: -1 });
-          // 各列の着地点を探す
+          let o = { x, y: -1 - Math.floor(i/6), targetY: -1 };
           for(let ty=ROWS-1; ty>=0; ty--) {
             if(board[ty][x] === 0) {
-              let alreadyInLine = fallingOjama.filter(o => o.x === x && o.targetY !== -1).length;
-              fallingOjama[i].targetY = ty - alreadyInLine;
-              break;
+              let already = fallingOjama.filter(fo => fo.x === x && fo.targetY !== -1).length;
+              o.targetY = ty - already; break;
             }
           }
+          fallingOjama.push(o);
         }
-
-        // 落下プロセス
         for(let step = 0; step < 15; step++) {
           fallingOjama.forEach(o => { if(o.y < o.targetY) o.y += 0.5; });
-          drawWithOjama(fallingOjama);
+          myCtx.clearRect(0, 0, 240, 480);
+          board.forEach((row, y) => row.forEach((c, x) => { if (c) drawPuyo(myCtx, x, y, c); }));
+          fallingOjama.forEach(o => drawPuyo(myCtx, o.x, o.y, 9));
           await new Promise(r => setTimeout(r, 30));
         }
-        
         fallingOjama.forEach(o => { if(o.targetY >= 0) board[o.targetY][o.x] = 9; });
         updateOjamaUI();
-      }
-
-      function drawWithOjama(falling) {
-        myCtx.clearRect(0, 0, 240, 480);
-        board.forEach((row, y) => row.forEach((c, x) => { if (c) drawPuyo(myCtx, x, y, c); }));
-        falling.forEach(o => drawPuyo(myCtx, o.x, o.y, 9));
       }
 
       function findMatches() {
@@ -329,7 +335,7 @@
       }
 
       function update() {
-        if(isProcessing) return; // 落下アニメ中は描画をスキップ
+        if(isProcessing) return;
         myCtx.clearRect(0, 0, 240, 480);
         board?.forEach((row, y) => row.forEach((c, x) => { if (c) drawPuyo(myCtx, x, y, c); }));
         if (activePuyo) activePuyo.getPos().forEach(p => drawPuyo(myCtx, p.x, p.y, p.c));
@@ -355,7 +361,7 @@
       }
 
       function drawPuyo(ctx, x, y, c, s = 40) {
-        if(y < 0 && c !== 9) return; // 盤面外は描画しない（おじゃま落下中以外）
+        if(y < 0 && c !== 9) return;
         ctx.fillStyle = c === 9 ? "#94a3b8" : COLORS[c];
         ctx.beginPath(); ctx.roundRect(x * s + 2, y * s + 2, s - 4, s - 4, s/2); ctx.fill();
         ctx.fillStyle = "rgba(255,255,255,0.4)";
@@ -375,13 +381,46 @@
       
       function finishRound(res) { 
         if (!gameActive) return; gameActive = false;
-        if (res === "LOSE") conn.send({ type: "LOSE" }); 
+        if (res === "WIN") { myWins++; sounds.win(); } else { enemyWins++; sounds.lose(); conn.send({ type: "LOSE" }); }
+        
+        // 勝ち星表示更新
+        updateWinDots();
+
+        const isMatchEnd = (myWins >= 2 || enemyWins >= 2);
+        
         document.getElementById("ui-overlay").style.display = "flex"; 
-        document.getElementById("view-result").style.display = "block"; 
+        document.getElementById("view-result").style.display = "block";
         document.getElementById("view-ready").style.display = "none";
-        document.getElementById("result-text").innerText = res === "WIN" ? "YOU WIN!" : "GAME OVER";
-        document.getElementById("result-text").style.color = res === "WIN" ? "var(--win)" : "var(--danger)";
+        
+        const resultText = document.getElementById("result-text");
+        if (isMatchEnd) {
+          resultText.innerText = (myWins >= 2) ? "FINAL VICTORY!" : "TOTAL DEFEAT...";
+          document.getElementById("next-round-btn").innerText = "REPLAY (NEW GAME)";
+          document.getElementById("next-round-btn").onclick = () => location.reload();
+        } else {
+          resultText.innerText = (res === "WIN") ? "ROUND WIN" : "ROUND LOST";
+          document.getElementById("next-round-btn").innerText = "NEXT ROUND";
+          document.getElementById("next-round-btn").onclick = () => {
+            isReady = false; enemyReady = false;
+            document.getElementById("view-result").style.display = "none";
+            document.getElementById("view-ready").style.display = "block";
+            document.getElementById("ready-btn").disabled = false;
+            document.getElementById("ready-btn").innerText = "準備OK！";
+            document.getElementById("ready-title").innerText = "NEXT ROUND?";
+          };
+        }
+        resultText.style.color = (res === "WIN") ? "var(--win)" : "var(--danger)";
+        document.getElementById("win-count-display").innerText = `${myWins} - ${enemyWins}`;
       }
+
+      function updateWinDots() {
+        const myDots = document.querySelectorAll("#my-win-dots .dot");
+        const enDots = document.querySelectorAll("#enemy-win-dots .dot");
+        myDots.forEach((d, i) => d.classList.toggle("filled", i < myWins));
+        enDots.forEach((d, i) => d.classList.toggle("filled", i < enemyWins));
+      }
+
+      function sync() { if (conn?.open) conn.send({ type: "STATE", board, score, ojama: myOjama }); }
 
       window.addEventListener("keydown", e => {
         if (e.key === "ArrowLeft") handleInput("left"); if (e.key === "ArrowRight") handleInput("right");
