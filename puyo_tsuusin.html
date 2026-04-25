@@ -97,25 +97,21 @@
 
     <script>
       // --- 音声システム ---
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      function playSound(freq, type, duration) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + duration);
-      }
       const sounds = {
-        move: () => playSound(440, 'sine', 0.05),
-        rotate: () => playSound(523, 'sine', 0.05),
-        drop: () => playSound(220, 'square', 0.1),
-        match: (c) => playSound(600 + c * 100, 'triangle', 0.3),
-        win: () => { playSound(523, 'sine', 0.2); setTimeout(()=>playSound(659, 'sine', 0.2), 150); setTimeout(()=>playSound(784, 'sine', 0.4), 300); },
-        lose: () => { playSound(392, 'sawtooth', 0.2); setTimeout(()=>playSound(349, 'sawtooth', 0.2), 150); setTimeout(()=>playSound(329, 'sawtooth', 0.4), 300); }
+        pop: new Audio('puyo_pop.mp3'),
+        move: new Audio('puyo_move.mp3'),
+        rotate: new Audio('puyo_rotate.mp3'),
+        button: new Audio('puyo_button.mp3'),
+        set: new Audio('puyo_set.mp3')
       };
+
+      function play(key) {
+        const s = sounds[key];
+        if (s) {
+          s.currentTime = 0;
+          s.play().catch(() => {});
+        }
+      }
 
       // --- ゲーム変数 ---
       let peer, conn, myID = Math.floor(1e9 + Math.random() * 9e8).toString();
@@ -147,6 +143,7 @@
       }
 
       document.getElementById("connect-btn").onclick = () => {
+        play('button');
         const tid = document.getElementById("target-id").value;
         if (tid.length === 10) { isHost = false; conn = peer.connect(tid); setupConn(); }
       };
@@ -175,17 +172,18 @@
       }
 
       document.getElementById("ready-btn").onclick = () => { 
+        play('button');
         isReady = true; 
         document.getElementById("ready-btn").disabled = true;
-        document.getElementById("ready-btn").innerText = "WAITING...";
+        document.getElementById("ready-btn").innerText = "待機中...";
         conn.send({ type: "READY" }); checkStartCondition(); 
       };
 
       async function startCountdown() {
         document.getElementById("ui-overlay").style.display = "none";
         const cd = document.getElementById("countdown");
-        for (let i = 3; i > 0; i--) { cd.innerText = i; playSound(880, 'sine', 0.1); await new Promise(r => setTimeout(r, 1000)); }
-        cd.innerText = "GO!"; playSound(1760, 'sine', 0.3); setTimeout(() => cd.innerText = "", 800); 
+        for (let i = 3; i > 0; i--) { cd.innerText = i; await new Promise(r => setTimeout(r, 1000)); }
+        cd.innerText = "GO!"; setTimeout(() => cd.innerText = "", 800); 
         startGame();
       }
 
@@ -212,42 +210,48 @@
 
       function handleInput(type) {
         if (!gameActive || isProcessing) return;
-        if (type === "left" && canMove(activePuyo, -1, 0)) { activePuyo.x--; sounds.move(); }
-        if (type === "right" && canMove(activePuyo, 1, 0)) { activePuyo.x++; sounds.move(); }
-        if (type === "down" && canMove(activePuyo, 0, 1)) { activePuyo.y++; }
+        if (type === "left" && canMove(activePuyo, -1, 0)) { activePuyo.x--; play('move'); }
+        if (type === "right" && canMove(activePuyo, 1, 0)) { activePuyo.x++; play('move'); }
+        if (type === "down" && canMove(activePuyo, 0, 1)) { activePuyo.y++; play('move'); }
         if (type === "up" || type === "rotR") {
-          sounds.rotate();
+          play('rotate');
           if (canMove(activePuyo, 0, 0, 1)) activePuyo.rot = (activePuyo.rot + 1) % 4;
           else if (canMove(activePuyo, -1, 0, 1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 1) % 4; }
           else if (canMove(activePuyo, 1, 0, 1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 1) % 4; }
         }
         if (type === "rotL") {
-          sounds.rotate();
+          play('rotate');
           if (canMove(activePuyo, 0, 0, -1)) activePuyo.rot = (activePuyo.rot + 3) % 4;
           else if (canMove(activePuyo, -1, 0, -1)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + 3) % 4; }
           else if (canMove(activePuyo, 1, 0, -1)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + 3) % 4; }
         }
-        if (type === "drop") { sounds.drop(); while (canMove(activePuyo, 0, 1)) activePuyo.y++; lockDelay = 800; }
+        if (type === "drop") { while (canMove(activePuyo, 0, 1)) activePuyo.y++; lockDelay = 800; }
         sync();
       }
 
       async function gameLoop() {
         if (!gameActive) return;
         if (!isProcessing) {
-          if (canMove(activePuyo, 0, 1)) { activePuyo.y++; lockDelay = 0; }
-          else {
+          if (canMove(activePuyo, 0, 1)) { 
+            activePuyo.y++; 
+            lockDelay = 0; 
+          } else {
             lockDelay += 400;
             if (lockDelay >= 800) {
               isProcessing = true;
+              play('set');
               activePuyo.getPos().forEach(p => { if (p.y >= 0) board[p.y][p.x] = p.c; });
+              activePuyo = null;
               await handleChain();
               if (myOjama > 0) await dropOjamaAnim();
-              spawnPuyo(); isProcessing = false; lockDelay = 0;
+              spawnPuyo(); 
+              isProcessing = false; 
+              lockDelay = 0;
             }
           }
         }
         sync();
-        setTimeout(gameLoop, isProcessing ? 80 : 800);
+        setTimeout(gameLoop, isProcessing ? 50 : 800);
       }
 
       async function handleChain() {
@@ -266,7 +270,8 @@
           }
           const matches = findMatches();
           if (matches.length === 0) break;
-          chain++; sounds.match(chain);
+          chain++; 
+          play('pop');
           matches.forEach(p => { 
             spawnParticles(p.x, p.y, COLORS[board[p.y][p.x]]);
             [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dx, dy]) => {
@@ -308,6 +313,7 @@
           await new Promise(r => setTimeout(r, 30));
         }
         fallingOjama.forEach(o => { if(o.targetY >= 0) board[o.targetY][o.x] = 9; });
+        play('set');
         updateOjamaUI();
       }
 
@@ -335,18 +341,21 @@
       }
 
       function update() {
-        if(isProcessing) return;
         myCtx.clearRect(0, 0, 240, 480);
         board?.forEach((row, y) => row.forEach((c, x) => { if (c) drawPuyo(myCtx, x, y, c); }));
         if (activePuyo) activePuyo.getPos().forEach(p => drawPuyo(myCtx, p.x, p.y, p.c));
         myCtx.fillStyle = "rgba(255,255,255,0.3)"; myCtx.font = "bold 20px Arial";
         myCtx.fillText("×", DEAD_X * SIZE + 12, DEAD_Y * SIZE + 30);
         [n1Ctx, n2Ctx].forEach((ctx, i) => {
-          ctx.clearRect(0, 0, 40, 80); drawPuyo(ctx, 0, 1, nextPuyos[i][0], 20); drawPuyo(ctx, 0, 0, nextPuyos[i][1], 20);
+          ctx.clearRect(0, 0, 40, 80); 
+          if(nextPuyos[i]) {
+            drawPuyo(ctx, 0, 1, nextPuyos[i][0], 20); 
+            drawPuyo(ctx, 0, 0, nextPuyos[i][1], 20);
+          }
         });
         particles = particles.filter(p => {
           p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-          myCtx.fillStyle = p.c; myCtx.globalAlpha = p.life;
+          myCtx.fillStyle = p.c; myCtx.globalAlpha = Math.max(0, p.life);
           myCtx.fillRect(p.x, p.y, 4, 4); myCtx.globalAlpha = 1;
           return p.life > 0;
         });
@@ -377,15 +386,13 @@
         document.getElementById("enemy-ojama-bar").innerHTML = enemyOjama > 0 ? buildIcons(enemyOjama) : "";
       }
 
-      function sync() { if (conn?.open) conn.send({ type: "STATE", board, score, ojama: myOjama }); }
+      function sync() { if (conn?.open && board) conn.send({ type: "STATE", board, score, ojama: myOjama }); }
       
       function finishRound(res) { 
         if (!gameActive) return; gameActive = false;
-        if (res === "WIN") { myWins++; sounds.win(); } else { enemyWins++; sounds.lose(); conn.send({ type: "LOSE" }); }
+        if (res === "WIN") { myWins++; } else { enemyWins++; conn.send({ type: "LOSE" }); }
         
-        // 勝ち星表示更新
         updateWinDots();
-
         const isMatchEnd = (myWins >= 2 || enemyWins >= 2);
         
         document.getElementById("ui-overlay").style.display = "flex"; 
@@ -396,11 +403,12 @@
         if (isMatchEnd) {
           resultText.innerText = (myWins >= 2) ? "FINAL VICTORY!" : "TOTAL DEFEAT...";
           document.getElementById("next-round-btn").innerText = "REPLAY (NEW GAME)";
-          document.getElementById("next-round-btn").onclick = () => location.reload();
+          document.getElementById("next-round-btn").onclick = () => { play('button'); location.reload(); };
         } else {
           resultText.innerText = (res === "WIN") ? "ROUND WIN" : "ROUND LOST";
           document.getElementById("next-round-btn").innerText = "NEXT ROUND";
           document.getElementById("next-round-btn").onclick = () => {
+            play('button');
             isReady = false; enemyReady = false;
             document.getElementById("view-result").style.display = "none";
             document.getElementById("view-ready").style.display = "block";
@@ -419,8 +427,6 @@
         myDots.forEach((d, i) => d.classList.toggle("filled", i < myWins));
         enDots.forEach((d, i) => d.classList.toggle("filled", i < enemyWins));
       }
-
-      function sync() { if (conn?.open) conn.send({ type: "STATE", board, score, ojama: myOjama }); }
 
       window.addEventListener("keydown", e => {
         if (e.key === "ArrowLeft") handleInput("left"); if (e.key === "ArrowRight") handleInput("right");
