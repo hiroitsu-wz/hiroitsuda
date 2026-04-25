@@ -26,7 +26,7 @@
       .btn-drop { background: #3b82f6; grid-column: span 4; padding: 10px 0; font-size: 16px; font-weight: bold; }
       .ojama-bar { height: 20px; font-size: 12px; color: #ef4444; font-weight: bold; }
       .match-score { font-size: 24px; color: #facc15; margin: 5px 0; font-weight: 900; }
-      .player-label { font-size: 12px; margin-bottom: 2px; color: #94a3b8; }
+      .player-label { font-size: 14px; margin-bottom: 2px; color: #38bdf8; font-weight: bold; }
     </style>
   </head>
   <body>
@@ -99,6 +99,7 @@
         rot: new Audio("puyo_rotate.mp3"),
         btn: new Audio("puyo_button.mp3"),
         set: new Audio("puyo_set.mp3"),
+        ojama: new Audio("puyo_ojama.mp3"), // 追加: おじゃま落下音
       };
       function play(k) { if (se[k]) { se[k].currentTime = 0; se[k].play().catch(() => {}); } }
 
@@ -142,6 +143,11 @@
           if (data.type === "SYNC") {
             enemyBoard = data.board; enemyActivePuyo = data.active;
             enemyScore = data.score; enemyOjama = data.ojama;
+            // 相手の名前も同期に含めるか、初期化時に確実に受け取る
+            if(data.name) {
+                enemyName = data.name;
+                document.getElementById("enemy-name-display").innerText = enemyName;
+            }
             drawEnemy();
           }
           if (data.type === "ATTACK") { myOjama += data.amount; updateOjamaUI(); }
@@ -154,7 +160,6 @@
           }
         });
 
-        // 相手が切断した時の処理
         conn.on("close", () => {
           alert("相手との接続が切れました。");
           location.reload();
@@ -184,19 +189,26 @@
         checkStart();
       };
 
-      // もう一度プレイ（最初から）の処理
+      // 「もう一度プレイ」ボタンの挙動修正
       document.getElementById("rematch-btn").onclick = () => {
         play("btn");
-        amIReady = true;
-        myWins = 0; enemyWins = 0; // スコアをリセット
+        myWins = 0; enemyWins = 0; // スコアリセット
         updateStarUI();
+        
+        // 準備画面に戻す
         document.getElementById("view-result").style.display = "none";
         document.getElementById("view-ready").style.display = "block";
         document.getElementById("ready-status").innerText = "REMATCH";
-        document.getElementById("sync-msg").innerText = "相手の返答を待っています...";
-        document.getElementById("ready-btn").style.display = "none";
-        conn.send({ type: "REMATCH_READY" });
-        checkStart();
+        document.getElementById("sync-msg").innerText = "名前を確認して準備完了を押してください";
+        
+        // ボタン類を初期状態に戻す
+        const rBtn = document.getElementById("ready-btn");
+        rBtn.style.display = "block";
+        rBtn.disabled = false;
+        rBtn.innerText = "準備完了";
+        
+        amIReady = false; 
+        isEnemyReady = false;
       };
 
       function checkStart() {
@@ -204,7 +216,6 @@
           amIReady = false; 
           isEnemyReady = false;
           document.getElementById("view-ready").style.display = "none";
-          document.getElementById("ready-btn").style.display = "block";
           document.getElementById("ready-btn").disabled = false;
           document.getElementById("ready-btn").innerText = "準備完了";
           startGame();
@@ -296,16 +307,39 @@
           }
           const matches = findMatches();
           if (matches.length === 0) break;
+          
           play("pop");
-          matches.forEach((p) => (board[p.y][p.x] = 0));
+          
+          // おじゃまぷよ消去ロジック: マッチしたぷよの上下左右をチェック
+          const toRemove = [...matches];
+          matches.forEach(m => {
+              const neighbors = [{x:m.x+1, y:m.y}, {x:m.x-1, y:m.y}, {x:m.x, y:m.y+1}, {x:m.x, y:m.y-1}];
+              neighbors.forEach(n => {
+                  if (n.x >= 0 && n.x < COLS && n.y >= 0 && n.y < ROWS) {
+                      if (board[n.y][n.x] === 9) { // 9番はおじゃまぷよ
+                          toRemove.push({x: n.x, y: n.y});
+                      }
+                  }
+              });
+          });
+
+          toRemove.forEach((p) => (board[p.y][p.x] = 0));
           score += matches.length * 10 * chain;
-          if (matches.length >= 4) conn.send({ type: "ATTACK", amount: Math.floor(matches.length / 2) });
+          
+          // 攻撃計算（マッチした数でおじゃまを送る）
+          if (matches.length >= 4) {
+              let attackPower = Math.floor(matches.length / 2);
+              if (chain > 1) attackPower += chain * 2;
+              conn.send({ type: "ATTACK", amount: attackPower });
+          }
+          
           chain++; sync();
           await new Promise((r) => setTimeout(r, 400));
         }
       }
 
       async function dropOjamaAnim() {
+        play("ojama"); // 落下開始音
         let count = Math.min(myOjama, 30); myOjama -= count; updateOjamaUI();
         let currentFalling = [];
         for (let i = 0; i < count; i++) {
@@ -343,7 +377,7 @@
         return matched;
       }
 
-      function sync() { if (conn?.open) conn.send({ type: "SYNC", board, active: activePuyo, score, ojama: myOjama }); }
+      function sync() { if (conn?.open) conn.send({ type: "SYNC", board, active: activePuyo, score, ojama: myOjama, name: myName }); }
 
       function renderLoop() {
         if (!gameActive) return;
