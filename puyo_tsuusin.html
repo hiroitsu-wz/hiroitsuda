@@ -26,6 +26,7 @@
       .btn-drop { background: #3b82f6; grid-column: span 4; padding: 10px 0; font-size: 16px; font-weight: bold; }
       .ojama-bar { height: 20px; font-size: 12px; color: #ef4444; font-weight: bold; }
       .match-score { font-size: 24px; color: #facc15; margin: 5px 0; font-weight: 900; }
+      .player-label { font-size: 12px; margin-bottom: 2px; color: #94a3b8; }
     </style>
   </head>
   <body>
@@ -37,16 +38,21 @@
         <input type="tel" id="target-id" placeholder="相手のIDを入力" />
         <button class="big-btn" id="connect-btn">対戦を申し込む</button>
       </div>
+
       <div id="view-ready" class="modal" style="display: none">
         <h2 id="ready-status">CONNECTED!</h2>
+        <p style="font-size: 14px; margin-bottom: 5px;">名前を入力してください</p>
+        <input type="text" id="my-name-input" placeholder="なまえ" maxlength="8" value="Player1" />
         <p id="sync-msg" style="color: #94a3b8; font-size: 14px">相手の準備を待っています...</p>
         <button class="big-btn" id="ready-btn">準備完了</button>
       </div>
+
       <div id="view-result" class="modal" style="display: none">
         <h2 id="result-text">WIN</h2>
         <div id="match-status" class="match-score">★ 0 - 0 ★</div>
         <button class="big-btn" id="next-match-btn" style="display:none">次の試合へ</button>
-        <button class="big-btn" id="rematch-btn" onclick="location.reload()" style="display:none">最初からやり直す</button>
+        <button class="big-btn" id="rematch-btn" style="display:none; background: #22c55e;">もう一度プレイ</button>
+        <button class="big-btn" id="exit-btn" onclick="location.reload()" style="display:none; background: #ef4444; margin-top: 8px;">接続を切る</button>
       </div>
     </div>
 
@@ -67,12 +73,14 @@
             <div class="next-box" id="next2" style="transform: scale(0.8)"></div>
           </div>
         </div>
-        <div style="margin-top: 5px">YOU: <span id="my-score">0</span></div>
+        <div class="player-label" id="my-name-display">YOU</div>
+        <div style="margin-top: 5px">Score: <span id="my-score">0</span></div>
       </div>
       <div class="field-wrapper">
         <div id="enemy-ojama-bar" class="ojama-bar"></div>
         <canvas id="enemy-canvas" width="240" height="480"></canvas>
-        <div style="margin-top: 5px">ENEMY: <span id="enemy-score">0</span></div>
+        <div class="player-label" id="enemy-name-display">ENEMY</div>
+        <div style="margin-top: 5px">Score: <span id="enemy-score">0</span></div>
       </div>
     </div>
 
@@ -100,6 +108,7 @@
       let gameActive = false, isProcessing = false;
       let amIReady = false, isEnemyReady = false;
       let myWins = 0, enemyWins = 0;
+      let myName = "Player1", enemyName = "Enemy";
       const WIN_GOAL = 2;
 
       const myCtx = document.getElementById("my-canvas").getContext("2d");
@@ -122,8 +131,14 @@
           document.getElementById("view-connect").style.display = "none";
           document.getElementById("view-ready").style.display = "block";
         });
+        
         conn.on("data", (data) => {
-          if (data.type === "READY_SIGNAL") { isEnemyReady = true; checkStart(); }
+          if (data.type === "READY_SIGNAL") { 
+            isEnemyReady = true; 
+            enemyName = data.name || "Enemy";
+            document.getElementById("enemy-name-display").innerText = enemyName;
+            checkStart(); 
+          }
           if (data.type === "SYNC") {
             enemyBoard = data.board; enemyActivePuyo = data.active;
             enemyScore = data.score; enemyOjama = data.ojama;
@@ -132,29 +147,55 @@
           if (data.type === "ATTACK") { myOjama += data.amount; updateOjamaUI(); }
           if (data.type === "GAMEOVER") endGame("WIN");
           if (data.type === "NEXT_MATCH_READY") { isEnemyReady = true; checkStart(); }
+          if (data.type === "REMATCH_READY") { 
+            isEnemyReady = true; 
+            document.getElementById("sync-msg").innerText = "相手がもう一度プレイを希望しています！";
+            checkStart(); 
+          }
+        });
+
+        // 相手が切断した時の処理
+        conn.on("close", () => {
+          alert("相手との接続が切れました。");
+          location.reload();
         });
       }
 
       document.getElementById("ready-btn").onclick = () => {
         play("btn");
         amIReady = true;
+        myName = document.getElementById("my-name-input").value || "Player1";
+        document.getElementById("my-name-display").innerText = myName;
         document.getElementById("ready-btn").disabled = true;
         document.getElementById("ready-btn").innerText = "待機中...";
-        conn.send({ type: "READY_SIGNAL" });
+        conn.send({ type: "READY_SIGNAL", name: myName });
         checkStart();
       };
 
       document.getElementById("next-match-btn").onclick = () => {
         play("btn");
         amIReady = true;
-        // リザルトを隠して待機画面へ（ID入力画面には戻さない）
         document.getElementById("view-result").style.display = "none";
         document.getElementById("view-ready").style.display = "block";
         document.getElementById("ready-status").innerText = "NEXT MATCH";
         document.getElementById("sync-msg").innerText = "相手の準備を待っています...";
-        document.getElementById("ready-btn").style.display = "none"; // 準備完了ボタンは不要
-
+        document.getElementById("ready-btn").style.display = "none";
         conn.send({ type: "NEXT_MATCH_READY" });
+        checkStart();
+      };
+
+      // もう一度プレイ（最初から）の処理
+      document.getElementById("rematch-btn").onclick = () => {
+        play("btn");
+        amIReady = true;
+        myWins = 0; enemyWins = 0; // スコアをリセット
+        updateStarUI();
+        document.getElementById("view-result").style.display = "none";
+        document.getElementById("view-ready").style.display = "block";
+        document.getElementById("ready-status").innerText = "REMATCH";
+        document.getElementById("sync-msg").innerText = "相手の返答を待っています...";
+        document.getElementById("ready-btn").style.display = "none";
+        conn.send({ type: "REMATCH_READY" });
         checkStart();
       };
 
@@ -162,7 +203,6 @@
         if (amIReady && isEnemyReady) {
           amIReady = false; 
           isEnemyReady = false;
-          // UIを初期化
           document.getElementById("view-ready").style.display = "none";
           document.getElementById("ready-btn").style.display = "block";
           document.getElementById("ready-btn").disabled = false;
@@ -372,6 +412,7 @@
         const matchStatus = document.getElementById("match-status");
         const nextBtn = document.getElementById("next-match-btn");
         const rematchBtn = document.getElementById("rematch-btn");
+        const exitBtn = document.getElementById("exit-btn");
 
         matchResult.innerText = res === "WIN" ? "YOU WIN!" : "YOU LOSE...";
         matchStatus.innerText = `★ ${myWins} - ${enemyWins} ★`;
@@ -380,11 +421,13 @@
             matchResult.innerText = myWins >= WIN_GOAL ? "👑 MATCH WINNER 👑" : "MATCH OVER...";
             nextBtn.style.display = "none";
             rematchBtn.style.display = "block";
+            exitBtn.style.display = "block";
         } else {
             nextBtn.style.display = "block";
             nextBtn.disabled = false;
             nextBtn.innerText = "次の試合へ";
             rematchBtn.style.display = "none";
+            exitBtn.style.display = "none";
         }
 
         document.getElementById("view-result").style.display = "block";
