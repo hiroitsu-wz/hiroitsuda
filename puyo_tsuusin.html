@@ -612,13 +612,30 @@
         sync();
       }
 
+      // --- 強化版回転ロジック（壁蹴り対応） ---
       function rotate(dr) {
+        const nextRot = (activePuyo.rot + dr + 4) % 4;
+        // 1. その場で回転
         if (canMove(0, 0, dr, activePuyo)) {
-          activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
+          activePuyo.rot = nextRot;
           play("rot");
-        } else if (canMove(activePuyo.x < 3 ? 1 : -1, 0, dr, activePuyo)) {
-          activePuyo.x += activePuyo.x < 3 ? 1 : -1;
-          activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
+        } 
+        // 2. 右に1マスずらして試行
+        else if (canMove(1, 0, dr, activePuyo)) {
+          activePuyo.x += 1;
+          activePuyo.rot = nextRot;
+          play("rot");
+        } 
+        // 3. 左に1マスずらして試行
+        else if (canMove(-1, 0, dr, activePuyo)) {
+          activePuyo.x -= 1;
+          activePuyo.rot = nextRot;
+          play("rot");
+        }
+        // 4. 上に1マスずらして試行（接地時の回転対策）
+        else if (canMove(0, -1, dr, activePuyo)) {
+          activePuyo.y -= 1;
+          activePuyo.rot = nextRot;
           play("rot");
         }
       }
