@@ -24,10 +24,12 @@
       .btn-drop { background: #3b82f6; grid-column: span 4; padding: 10px 0; font-size: 16px; font-weight: bold; }
       .ojama-bar { height: 20px; font-size: 12px; color: #ef4444; font-weight: bold; overflow: hidden; white-space: nowrap; width: 150px; text-align: center; }
       .match-score { font-size: 24px; color: #facc15; margin: 5px 0; font-weight: 900; }
+      #countdown-text { position: absolute; font-size: 80px; font-weight: 900; color: #facc15; z-index: 2000; text-shadow: 0 0 20px rgba(250, 204, 21, 0.5); display: none; pointer-events: none; }
     </style>
   </head>
   <body>
     <div class="moon"></div>
+    <div id="countdown-text">3</div>
     <div id="ui-overlay">
       <div id="view-connect" class="modal">
         <h2>MARUICHI Online</h2>
@@ -37,13 +39,19 @@
       </div>
       <div id="view-ready" class="modal" style="display: none">
         <h2>CONNECTED!</h2>
-        <input type="text" id="my-name-input" placeholder="なまえ" maxlength="8" value="Player1" />
+        <p id="ready-status" style="color: #94a3b8; font-size: 14px; margin-bottom: 10px;">準備ができたらボタンを押してね</p>
         <button class="big-btn" id="ready-btn">準備完了</button>
       </div>
       <div id="view-result" class="modal" style="display: none">
         <h2 id="result-text">WIN</h2>
         <div id="match-status" class="match-score">★ 0 - 0 ★</div>
+        <p id="next-match-status" style="color: #94a3b8; font-size: 14px; margin-bottom: 10px;">対戦相手を待っています...</p>
         <button class="big-btn" id="next-match-btn">次の試合へ</button>
+      </div>
+      <div id="view-disconnect" class="modal" style="display: none">
+        <h2>DISCONNECTED</h2>
+        <p>相手の通信が切れました。</p>
+        <button class="big-btn" onclick="location.reload()">トップに戻る</button>
       </div>
     </div>
     
@@ -72,7 +80,7 @@
     </div>
 
     <script>
-      const se = { pop: new Audio("puyo_pop.mp3"), move: new Audio("puyo_move.mp3"), rot: new Audio("puyo_rotate.mp3"), btn: new Audio("puyo_button.mp3"), set: new Audio("puyo_set.mp3"), ojama: new Audio("puyo_ojama.mp3") };
+      const se = { pop: new Audio("puyo_pop.mp3"), move: new Audio("puyo_move.mp3"), rot: new Audio("puyo_rotate.mp3"), btn: new Audio("puyo_button.mp3"), set: new Audio("puyo_set.mp3"), ojama: new Audio("puyo_ojama.mp3"), count: new Audio("puyo_count.mp3") };
       function play(k) { if (se[k]) { se[k].currentTime = 0; se[k].play().catch(() => {}); } }
 
       let peer, conn, myID = Math.floor(1e8 + Math.random() * 9e7).toString();
@@ -90,17 +98,63 @@
 
       function setupConn() {
         conn.on("open", () => { document.getElementById("view-connect").style.display = "none"; document.getElementById("view-ready").style.display = "block"; });
+        conn.on("close", () => showDisconnect());
+        conn.on("error", () => showDisconnect());
         conn.on("data", data => {
-          if (data.type === "READY") { isEnemyReady = true; checkStart(); }
+          if (data.type === "READY") { 
+            isEnemyReady = true; 
+            updateReadyUI();
+            checkStart(); 
+          }
           if (data.type === "SYNC") { enemyBoard = data.board; enemyActivePuyo = data.active; enemyOjama = data.ojama; }
           if (data.type === "ATTACK") { myOjama += data.amount; updateOjamaUI(); }
           if (data.type === "GAMEOVER") { if(gameActive) endGame("WIN"); }
         });
       }
 
-      function checkStart() { if (amIReady && isEnemyReady) { amIReady = false; isEnemyReady = false; startGame(); } }
-      document.getElementById("ready-btn").onclick = () => { play("btn"); amIReady = true; conn.send({ type: "READY" }); checkStart(); };
-      document.getElementById("next-match-btn").onclick = () => { play("btn"); amIReady = true; document.getElementById("next-match-btn").innerText = "待機中..."; conn.send({ type: "READY" }); checkStart(); };
+      function showDisconnect() {
+        gameActive = false;
+        document.getElementById("ui-overlay").style.display = "flex";
+        document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
+        document.getElementById("view-disconnect").style.display = "block";
+      }
+
+      function updateReadyUI() {
+        const status = document.getElementById("ready-status");
+        const nextStatus = document.getElementById("next-match-status");
+        const msg = isEnemyReady ? "あなたの準備待ちです！" : (amIReady ? "相手の準備を待っています..." : "準備ができたらボタンを押してね");
+        if (status) status.innerText = msg;
+        if (nextStatus) nextStatus.innerText = msg;
+      }
+
+      function checkStart() { 
+        if (amIReady && isEnemyReady) { 
+          amIReady = false; isEnemyReady = false; 
+          startCountdown();
+        } 
+      }
+
+      document.getElementById("ready-btn").onclick = () => { 
+        play("btn"); amIReady = true; conn.send({ type: "READY" }); updateReadyUI(); checkStart(); 
+      };
+      document.getElementById("next-match-btn").onclick = () => { 
+        play("btn"); amIReady = true; document.getElementById("next-match-btn").innerText = "準備完了"; conn.send({ type: "READY" }); updateReadyUI(); checkStart(); 
+      };
+
+      async function startCountdown() {
+        document.getElementById("ui-overlay").style.display = "none";
+        const ct = document.getElementById("countdown-text");
+        ct.style.display = "block";
+        for (let i = 3; i > 0; i--) {
+          ct.innerText = i;
+          play("count");
+          await new Promise(r => setTimeout(r, 1000));
+        }
+        ct.innerText = "GO!";
+        await new Promise(r => setTimeout(r, 500));
+        ct.style.display = "none";
+        startGame();
+      }
 
       function startGame() {
         document.getElementById("ui-overlay").style.display = "none";
@@ -174,8 +228,6 @@
           }
           let matches = findMatches(); if (matches.length === 0) break;
           play("pop");
-          
-          // お邪魔ぷよ消去チェック
           const toRemove = new Set(matches.map(p => `${p.x},${p.y}`));
           matches.forEach(p => {
             const ads = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}];
@@ -184,9 +236,7 @@
               if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS && board[ny][nx] === 9) toRemove.add(`${nx},${ny}`);
             });
           });
-
           toRemove.forEach(key => { const [kx, ky] = key.split(",").map(Number); board[ky][kx] = 0; });
-
           conn.send({ type: "ATTACK", amount: Math.floor(matches.length / 2) + (chain > 1 ? chain * 2 : 0) });
           chain++; sync(); await new Promise(r => setTimeout(r, 400));
         }
@@ -211,61 +261,27 @@
 
       function drawPuyo(ctx, x, y, v) {
         if (y < 0) return;
-        const cx = x * SIZE + SIZE / 2;
-        const cy = y * SIZE + SIZE / 2;
-        const r = SIZE * 0.45;
-        
+        const cx = x * SIZE + SIZE / 2, cy = y * SIZE + SIZE / 2, r = SIZE * 0.45;
         ctx.fillStyle = v === 9 ? "#cbd5e1" : COLORS[v];
         ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
-        
-        if (v === 9) { // お邪魔ぷよの目
-          ctx.fillStyle = "white";
-          ctx.beginPath();
-          ctx.arc(cx - r/4, cy, r/6, 0, Math.PI * 2);
-          ctx.arc(cx + r/4, cy, r/6, 0, Math.PI * 2);
-          ctx.fill();
-        } else { // 普通のぷよの目
-          ctx.fillStyle = "white";
-          ctx.beginPath();
-          ctx.arc(cx - r/3, cy, r/4, 0, Math.PI * 2);
-          ctx.arc(cx + r/3, cy, r/4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "black";
-          ctx.beginPath();
-          ctx.arc(cx - r/3, cy, r/8, 0, Math.PI * 2);
-          ctx.arc(cx + r/3, cy, r/8, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        ctx.fillStyle = "white"; ctx.beginPath();
+        if (v === 9) { ctx.arc(cx - r/4, cy, r/6, 0, Math.PI * 2); ctx.arc(cx + r/4, cy, r/6, 0, Math.PI * 2); }
+        else { ctx.arc(cx - r/3, cy, r/4, 0, Math.PI * 2); ctx.arc(cx + r/3, cy, r/4, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "black"; ctx.beginPath(); ctx.arc(cx - r/3, cy, r/8, 0, Math.PI * 2); ctx.arc(cx + r/3, cy, r/8, 0, Math.PI * 2); }
+        ctx.fill();
       }
 
       function drawX(ctx, x, y) {
-        ctx.save();
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        const m = SIZE * 0.25;
-        const cx = x * SIZE + SIZE / 2;
-        const cy = y * SIZE + SIZE / 2;
-        ctx.beginPath();
-        ctx.moveTo(cx - (SIZE/2 - m), cy - (SIZE/2 - m));
-        ctx.lineTo(cx + (SIZE/2 - m), cy + (SIZE/2 - m));
-        ctx.moveTo(cx + (SIZE/2 - m), cy - (SIZE/2 - m));
-        ctx.lineTo(cx - (SIZE/2 - m), cy + (SIZE/2 - m));
-        ctx.stroke();
-        ctx.restore();
+        ctx.save(); ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 3; ctx.lineCap = "round";
+        const m = SIZE * 0.25, cx = x * SIZE + SIZE / 2, cy = y * SIZE + SIZE / 2;
+        ctx.beginPath(); ctx.moveTo(cx - (SIZE/2 - m), cy - (SIZE/2 - m)); ctx.lineTo(cx + (SIZE/2 - m), cy + (SIZE/2 - m)); ctx.moveTo(cx + (SIZE/2 - m), cy - (SIZE/2 - m)); ctx.lineTo(cx - (SIZE/2 - m), cy + (SIZE/2 - m)); ctx.stroke(); ctx.restore();
       }
 
       function renderLoop() {
         if (!gameActive) return;
-        myCtx.clearRect(0, 0, 150, 300);
-        enemyCtx.clearRect(0, 0, 150, 300);
-        
-        if (board[0][2] === 0) drawX(myCtx, 2, 0);
-        if (enemyBoard[0][2] === 0) drawX(enemyCtx, 2, 0);
-        
+        myCtx.clearRect(0, 0, 150, 300); enemyCtx.clearRect(0, 0, 150, 300);
+        if (board[0][2] === 0) drawX(myCtx, 2, 0); if (enemyBoard[0][2] === 0) drawX(enemyCtx, 2, 0);
         board.forEach((r, y) => r.forEach((v, x) => { if (v) drawPuyo(myCtx, x, y, v); }));
         enemyBoard.forEach((r, y) => r.forEach((v, x) => { if (v) drawPuyo(enemyCtx, x, y, v); }));
-        
         if (activePuyo && !isProcessing) {
           const a = activePuyo, ox = [0, 1, 0, -1][a.rot], oy = [-1, 0, 1, 0][a.rot];
           drawPuyo(myCtx, a.x, a.y, a.c1); drawPuyo(myCtx, a.x + ox, a.y + oy, a.c2);
@@ -278,12 +294,9 @@
       }
 
       async function dropOjama() {
-        play("ojama");
-        let c = Math.min(myOjama, 30);
-        myOjama -= c;
+        play("ojama"); let c = Math.min(myOjama, 30); myOjama -= c;
         for (let i = 0; i < c; i++) {
-          let x = i % 6;
-          for (let ty = ROWS - 1; ty >= 0; ty--) { if (board[ty][x] === 0) { board[ty][x] = 9; break; } }
+          let x = i % 6; for (let ty = ROWS - 1; ty >= 0; ty--) { if (board[ty][x] === 0) { board[ty][x] = 9; break; } }
         }
         updateOjamaUI(); sync();
       }
@@ -292,11 +305,8 @@
       
       function updateNextUI() {
         [1, 2].forEach(i => {
-          const p = nextQueue[i - 1];
-          const eye = `<div style="width:4px;height:4px;background:white;border-radius:50%;margin:0 1px;"></div>`;
-          document.getElementById(`next${i}`).innerHTML = `
-            <div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>
-            <div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c1]};display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>`;
+          const p = nextQueue[i - 1], eye = `<div style="width:4px;height:4px;background:white;border-radius:50%;margin:0 1px;"></div>`;
+          document.getElementById(`next${i}`).innerHTML = `<div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;display:flex;justify-content:center;align-items:center;">${eye}${eye}</div><div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c1]};display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>`;
         });
       }
 
@@ -313,7 +323,9 @@
         document.getElementById("result-text").innerText = res === "WIN" ? "YOU WIN!" : "YOU LOSE...";
         document.getElementById("match-status").innerText = `★ ${myWins} - ${enemyWins} ★`;
         document.getElementById("ui-overlay").style.display = "flex";
+        document.querySelectorAll(".modal").forEach(m => m.style.display = "none");
         document.getElementById("view-result").style.display = "block";
+        updateReadyUI();
       }
 
       const setupBtn = (id, type) => {
