@@ -23,6 +23,7 @@
       .btn-rot-l { background: #ec4899; } .btn-rot-r { background: #8b5cf6; }
       .btn-drop { background: #3b82f6; grid-column: span 4; padding: 10px 0; font-size: 16px; font-weight: bold; }
       .ojama-bar { height: 20px; font-size: 12px; color: #ef4444; font-weight: bold; overflow: hidden; white-space: nowrap; width: 150px; text-align: center; }
+      .score-box { font-size: 14px; color: #38bdf8; font-family: monospace; margin-bottom: 2px; }
       .match-score { font-size: 24px; color: #facc15; margin: 5px 0; font-weight: 900; }
       #countdown-text { position: absolute; font-size: 80px; font-weight: 900; color: #facc15; z-index: 2000; text-shadow: 0 0 20px rgba(250, 204, 21, 0.5); display: none; pointer-events: none; }
     </style>
@@ -63,6 +64,7 @@
 
     <div class="battle-container">
       <div class="field-wrapper my-field">
+        <div id="my-score" class="score-box">SCORE: 0</div>
         <div id="my-ojama-bar" class="ojama-bar"></div>
         <div style="display: flex; align-items: flex-start">
           <canvas id="my-canvas" width="150" height="300"></canvas>
@@ -73,6 +75,7 @@
         </div>
       </div>
       <div class="field-wrapper">
+        <div id="enemy-score" class="score-box">SCORE: 0</div>
         <div id="enemy-ojama-bar" class="ojama-bar"></div>
         <canvas id="enemy-canvas" width="150" height="300"></canvas>
       </div>
@@ -88,6 +91,7 @@
 
       let peer, conn, myID = Math.floor(1e8 + Math.random() * 9e7).toString();
       let board, enemyBoard, activePuyo, enemyActivePuyo, myOjama = 0, enemyOjama = 0;
+      let myScore = 0, enemyScore = 0;
       let nextQueue = [], gameActive = false, isProcessing = false, amIReady = false, isEnemyReady = false, myWins = 0, enemyWins = 0;
       let particles = [];
       const WIN_GOAL = 2, ROWS = 12, COLS = 6, SIZE = 25;
@@ -98,15 +102,11 @@
       class Particle {
         constructor(x, y, color) {
           this.x = x; this.y = y; this.color = color;
-          this.vx = (Math.random() - 0.5) * 10; this.vy = (Math.random() - 0.5) * 10;
+          this.vx = (Math.random() - 0.5) * 8; this.vy = (Math.random() - 0.5) * 8;
           this.life = 1.0;
         }
         update() { this.x += this.vx; this.y += this.vy; this.life -= 0.05; }
-        draw(ctx) {
-          ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
-          ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI * 2); ctx.fill();
-          ctx.globalAlpha = 1;
-        }
+        draw(ctx) { ctx.globalAlpha = this.life; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, 3, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
       }
 
       peer = new Peer(myID);
@@ -120,7 +120,7 @@
         conn.on("error", () => showDisconnect());
         conn.on("data", data => {
           if (data.type === "READY") { isEnemyReady = true; updateReadyUI(); checkStart(); }
-          if (data.type === "SYNC") { enemyBoard = data.board; enemyActivePuyo = data.active; enemyOjama = data.ojama; }
+          if (data.type === "SYNC") { enemyBoard = data.board; enemyActivePuyo = data.active; enemyOjama = data.ojama; enemyScore = data.score; updateScoreUI(); updateOjamaUI(); }
           if (data.type === "ATTACK") { myOjama += data.amount; updateOjamaUI(); }
           if (data.type === "GAMEOVER") { if(gameActive) endGame("WIN"); }
         });
@@ -149,16 +149,16 @@
         document.getElementById("view-result").style.display = "none";
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         enemyBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        myOjama = 0; enemyOjama = 0; particles = [];
+        myOjama = 0; enemyOjama = 0; myScore = 0; enemyScore = 0; particles = [];
         nextQueue = Array.from({ length: 3 }, () => ({ c1: rnd(), c2: rnd() }));
-        spawnPuyo(); gameActive = true; requestAnimationFrame(renderLoop);
+        spawnPuyo(); gameActive = true; updateScoreUI(); requestAnimationFrame(renderLoop);
       }
 
       function rnd() { return Math.floor(Math.random() * 4) + 1; }
       function spawnPuyo() {
+        if (board[0][2] !== 0) { endGame("LOSE"); conn.send({ type: "GAMEOVER" }); return; }
         activePuyo = { x: 2, y: 0, rot: 0, ...nextQueue.shift() };
         nextQueue.push({ c1: rnd(), c2: rnd() }); updateNextUI();
-        if (!canMove(0, 0, 0, activePuyo)) { endGame("LOSE"); conn.send({ type: "GAMEOVER" }); }
         sync();
       }
 
@@ -197,9 +197,11 @@
         const ox = [0, 1, 0, -1][activePuyo.rot], oy = [-1, 0, 1, 0][activePuyo.rot];
         if (activePuyo.y >= 0) board[activePuyo.y][activePuyo.x] = activePuyo.c1;
         if (activePuyo.y + oy >= 0) board[activePuyo.y + oy][activePuyo.x + ox] = activePuyo.c2;
-        activePuyo = null; await handleChain();
+        activePuyo = null; 
+        await handleChain();
         if (myOjama > 0) await dropOjama();
-        if(gameActive) spawnPuyo(); isProcessing = false;
+        if(gameActive) spawnPuyo(); 
+        isProcessing = false;
       }
 
       async function handleChain() {
@@ -212,10 +214,26 @@
             if (dropped) { sync(); await new Promise(r => setTimeout(r, 60)); }
           }
           let matches = findMatches(); if (matches.length === 0) break;
+          
           play("pop");
+          // スコアとお邪魔計算（相殺ロジック）
+          let puyoCount = matches.length;
+          let attackPower = Math.floor(puyoCount / 2) + (chain > 1 ? chain * 3 : 0);
+          myScore += puyoCount * 10 * chain;
+          updateScoreUI();
+
           matches.forEach(p => {
-            for(let i=0; i<5; i++) particles.push(new Particle(p.x * SIZE + SIZE/2, p.y * SIZE + SIZE/2, COLORS[board[p.y][p.x]]));
+            for(let i=0; i<6; i++) particles.push(new Particle(p.x * SIZE + SIZE/2, p.y * SIZE + SIZE/2, COLORS[board[p.y][p.x]]));
           });
+
+          // 相殺処理
+          if (myOjama > 0) {
+            let offset = Math.min(myOjama, attackPower);
+            myOjama -= offset;
+            attackPower -= offset;
+            updateOjamaUI();
+          }
+
           const toRemove = new Set(matches.map(p => `${p.x},${p.y}`));
           matches.forEach(p => {
             [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}].forEach(ad => {
@@ -224,8 +242,10 @@
             });
           });
           toRemove.forEach(key => { const [kx, ky] = key.split(",").map(Number); board[ky][kx] = 0; });
-          conn.send({ type: "ATTACK", amount: Math.floor(matches.length / 2) + (chain > 1 ? chain * 2 : 0) });
-          chain++; sync(); await new Promise(r => setTimeout(r, 400));
+          
+          if (attackPower > 0) conn.send({ type: "ATTACK", amount: attackPower });
+          
+          chain++; sync(); await new Promise(r => setTimeout(r, 450));
         }
       }
 
@@ -257,9 +277,15 @@
         ctx.fill();
       }
 
+      function drawX(ctx, x, y) {
+        ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2;
+        const m = 5; ctx.beginPath(); ctx.moveTo(x*SIZE+m, y*SIZE+m); ctx.lineTo((x+1)*SIZE-m, (y+1)*SIZE-m); ctx.moveTo((x+1)*SIZE-m, y*SIZE+m); ctx.lineTo(x*SIZE+m, (y+1)*SIZE-m); ctx.stroke();
+      }
+
       function renderLoop() {
         if (!gameActive) return;
         myCtx.clearRect(0, 0, 150, 300); enemyCtx.clearRect(0, 0, 150, 300);
+        drawX(myCtx, 2, 0); drawX(enemyCtx, 2, 0);
         board.forEach((r, y) => r.forEach((v, x) => { if (v) drawPuyo(myCtx, x, y, v); }));
         enemyBoard.forEach((r, y) => r.forEach((v, x) => { if (v) drawPuyo(enemyCtx, x, y, v); }));
         if (activePuyo && !isProcessing) {
@@ -278,33 +304,34 @@
       async function dropOjama() {
         play("ojama");
         let count = Math.min(myOjama, 30); myOjama -= count;
-        const cols = [0,1,2,3,4,5].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < count; i++) {
-          let x = cols[i % 6];
-          let startY = -1;
-          // 落下演出用の一時的な描画が必要だが、簡易的に上から順に埋める
-          for (let ty = 0; ty < ROWS; ty++) {
-            if (board[ty][x] === 0) {
-              // 落下アニメーションの代わりに少しディレイを置いて配置
-              board[ty][x] = 9; 
-              sync(); await new Promise(r => setTimeout(r, 50));
-              break;
+        updateOjamaUI();
+        // 列ごとに順番に降らせる演出
+        for (let row = 0; row < Math.ceil(count/6); row++) {
+          for (let x = 0; x < COLS; x++) {
+            if (count <= 0) break;
+            for (let ty = ROWS - 1; ty >= 0; ty--) {
+              if (board[ty][x] === 0) { board[ty][x] = 9; break; }
             }
+            count--;
           }
+          sync(); await new Promise(r => setTimeout(r, 100));
         }
-        updateOjamaUI(); sync();
       }
 
-      function sync() { if (conn?.open) conn.send({ type: "SYNC", board, active: activePuyo, ojama: myOjama }); }
+      function sync() { if (conn?.open) conn.send({ type: "SYNC", board, active: activePuyo, ojama: myOjama, score: myScore }); }
+      function updateScoreUI() {
+        document.getElementById("my-score").innerText = `SCORE: ${myScore}`;
+        document.getElementById("enemy-score").innerText = `SCORE: ${enemyScore}`;
+      }
+      function updateOjamaUI() {
+        document.getElementById("my-ojama-bar").innerText = "●".repeat(Math.min(myOjama, 12)) + (myOjama > 12 ? "+" : "");
+        document.getElementById("enemy-ojama-bar").innerText = "●".repeat(Math.min(enemyOjama, 12)) + (enemyOjama > 12 ? "+" : "");
+      }
       function updateNextUI() {
         [1, 2].forEach(i => {
           const p = nextQueue[i - 1], eye = `<div style="width:4px;height:4px;background:white;border-radius:50%;margin:0 1px;"></div>`;
           document.getElementById(`next${i}`).innerHTML = `<div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;display:flex;justify-content:center;align-items:center;">${eye}${eye}</div><div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c1]};display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>`;
         });
-      }
-      function updateOjamaUI() {
-        document.getElementById("my-ojama-bar").innerText = "●".repeat(Math.min(myOjama, 12));
-        document.getElementById("enemy-ojama-bar").innerText = "●".repeat(Math.min(enemyOjama, 12));
       }
       function endGame(res) {
         gameActive = false; if (res === "WIN") myWins++; else enemyWins++;
