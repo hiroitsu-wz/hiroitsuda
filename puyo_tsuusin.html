@@ -18,7 +18,7 @@
       canvas { background: rgba(30, 41, 59, 0.95); border: 3px solid #475569; border-radius: 12px; width: 150px; height: 300px; }
       .my-field canvas { border-color: #3b82f6; }
       
-      /* バツ印の位置：Canvas内部の1行目(y=0)の中央に配置 */
+      /* バツ印の位置：Canvas内部の1行目(y=0)の中央列(x=2)に配置 */
       .x-mark { position: absolute; top: 23px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 900; color: #ef4444; text-shadow: 0 0 4px #000; z-index: 100; pointer-events: none; }
       
       .next-area { margin-left: 5px; display: flex; flex-direction: column; gap: 8px; }
@@ -142,18 +142,15 @@
       }
 
       function tryRotate(dr) {
-        // 通常の回転
         if (canMove(0, 0, dr, activePuyo)) {
           activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
           play("rot");
         } 
-        // 壁蹴り: 1マス左にずらして回転
         else if (canMove(-1, 0, dr, activePuyo)) {
           activePuyo.x--;
           activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
           play("rot");
         }
-        // 壁蹴り: 1マス右にずらして回転
         else if (canMove(1, 0, dr, activePuyo)) {
           activePuyo.x++;
           activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
@@ -172,16 +169,18 @@
         sync();
       }
 
-      // キーボード操作の追加
+      // キーボード操作の修正と追加
       window.addEventListener("keydown", (e) => {
         if (!gameActive) return;
         switch(e.key) {
           case "ArrowLeft": handleInput("left"); break;
           case "ArrowRight": handleInput("right"); break;
           case "ArrowDown": handleInput("down"); break;
-          case "ArrowUp": handleInput("up"); break;
-          case "x": case "X": handleInput("rotR"); break;
-          case "z": case "Z": handleInput("rotL"); break;
+          case "Spacebar": case " ": handleInput("up"); break; // スペースで急落下
+          case "Shift": handleInput("rotR"); break; // Shiftで右回転
+          case "ArrowUp": handleInput("rotL"); break; // ↑キーで左回転
+          case "x": case "X": handleInput("rotR"); break; // Xでも右回転できるように残す
+          case "z": case "Z": handleInput("rotL"); break; // Zでも左回転できるように残す
         }
       });
 
