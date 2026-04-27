@@ -93,6 +93,7 @@
         align-items: center;
         position: relative;
       }
+      /* PC・スマホ共通の見た目のサイズ */
       canvas {
         background: rgba(30, 41, 59, 0.95);
         border: 3px solid #475569;
@@ -103,19 +104,19 @@
       .my-field canvas {
         border-color: #3b82f6;
       }
-      
-      /* Xマークのスタイル設定 */
+
+      /* Xマークのスタイル設定：z-indexを最強に */
       .x-mark {
         position: absolute;
-        top: 20px; /* 1段目と2段目の間くらい */
+        top: 2px; 
         left: 50%;
         transform: translateX(-50%);
         font-size: 32px;
         font-weight: 900;
-        color: #ef4444; /* 赤色 */
-        text-shadow: 0 0 6px #000; /* 黒い影で視認性向上 */
-        z-index: 10; /* Canvasより前に */
-        pointer-events: none; /* クリックなどを透過 */
+        color: #ef4444;
+        text-shadow: 0 0 6px #000;
+        z-index: 100 !important;
+        pointer-events: none;
         font-family: Arial, sans-serif;
       }
 
@@ -186,7 +187,6 @@
         font-weight: bold;
       }
 
-      /* 色数選択トグル */
       .color-select-group {
         display: flex;
         justify-content: center;
@@ -222,65 +222,24 @@
 
       <div id="view-ready" class="modal" style="display: none">
         <h2 id="ready-status">CONNECTED!</h2>
-        <p style="font-size: 14px; margin-bottom: 5px">名前を入力</p>
-        <input
-          type="text"
-          id="my-name-input"
-          placeholder="なまえ"
-          maxlength="8"
-          value="Player1"
-        />
-
-        <p style="font-size: 14px; margin: 10px 0 5px 0">難易度（色数）</p>
+        <input type="text" id="my-name-input" placeholder="なまえ" maxlength="8" value="Player1" />
         <div class="color-select-group" id="color-select-area">
-          <div class="color-opt active" id="opt-4" onclick="selectColorNum(4)">
-            4色
-          </div>
-          <div class="color-opt" id="opt-5" onclick="selectColorNum(5)">
-            5色
-          </div>
+          <div class="color-opt active" id="opt-4" onclick="selectColorNum(4)">4色</div>
+          <div class="color-opt" id="opt-5" onclick="selectColorNum(5)">5色</div>
         </div>
-
-        <p id="sync-msg" style="color: #94a3b8; font-size: 14px">
-          準備ができたらボタンを押してください
-        </p>
         <button class="big-btn" id="ready-btn">準備完了</button>
       </div>
 
       <div id="view-result" class="modal" style="display: none">
         <h2 id="result-text">WIN</h2>
         <div id="match-status" class="match-score">★ 0 - 0 ★</div>
-        <button class="big-btn" id="next-match-btn" style="display: none">
-          次の試合へ
-        </button>
-        <button
-          class="big-btn"
-          id="rematch-btn"
-          style="display: none; background: #22c55e"
-        >
-          もう一度プレイ
-        </button>
-        <button
-          class="big-btn"
-          id="exit-btn"
-          onclick="location.reload()"
-          style="display: none; background: #ef4444; margin-top: 8px"
-        >
-          接続を切る
-        </button>
+        <button class="big-btn" id="next-match-btn" style="display: none">次の試合へ</button>
+        <button class="big-btn" id="rematch-btn" style="display: none; background: #22c55e">もう一度プレイ</button>
+        <button class="big-btn" id="exit-btn" onclick="location.reload()" style="display: none; background: #ef4444; margin-top: 8px">接続を切る</button>
       </div>
     </div>
 
-    <div
-      style="
-        margin-top: 10px;
-        font-size: 18px;
-        font-weight: bold;
-        color: #38bdf8;
-      "
-    >
-      PUYOichi Ultimate
-    </div>
+    <div style="margin-top: 10px; font-size: 18px; font-weight: bold; color: #38bdf8;">PUYOichi Ultimate</div>
 
     <div style="display: flex; gap: 40px; margin-bottom: 5px">
       <div id="my-stars" style="color: #facc15; font-size: 20px">☆☆</div>
@@ -292,14 +251,10 @@
         <div class="x-mark">×</div>
         <div id="my-ojama-bar" class="ojama-bar"></div>
         <div style="display: flex; align-items: flex-start">
-          <canvas id="my-canvas" width="240" height="480"></canvas>
+          <canvas id="my-canvas" width="150" height="300"></canvas>
           <div class="next-area">
             <div class="next-box" id="next1"></div>
-            <div
-              class="next-box"
-              id="next2"
-              style="transform: scale(0.8)"
-            ></div>
+            <div class="next-box" id="next2" style="transform: scale(0.8)"></div>
           </div>
         </div>
         <div class="player-label" id="my-name-display">YOU</div>
@@ -308,11 +263,9 @@
       <div class="field-wrapper">
         <div class="x-mark">×</div>
         <div id="enemy-ojama-bar" class="ojama-bar"></div>
-        <canvas id="enemy-canvas" width="240" height="480"></canvas>
+        <canvas id="enemy-canvas" width="150" height="300"></canvas>
         <div class="player-label" id="enemy-name-display">ENEMY</div>
-        <div style="margin-top: 5px">
-          Score: <span id="enemy-score">0</span>
-        </div>
+        <div style="margin-top: 5px">Score: <span id="enemy-score">0</span></div>
       </div>
     </div>
 
@@ -333,73 +286,35 @@
         set: new Audio("puyo_set.mp3"),
         ojama: new Audio("puyo_ojama.mp3"),
       };
-      function play(k) {
-        if (se[k]) {
-          se[k].currentTime = 0;
-          se[k].play().catch(() => {});
-        }
-      }
+      function play(k) { if (se[k]) { se[k].currentTime = 0; se[k].play().catch(() => {}); } }
 
-      let peer,
-        conn,
-        myID = Math.floor(1e8 + Math.random() * 9e7).toString();
-      let board,
-        enemyBoard,
-        activePuyo,
-        enemyActivePuyo,
-        score = 0,
-        enemyScore = 0,
-        myOjama = 0,
-        enemyOjama = 0;
-      let nextQueue = [],
-        fallingOjamas = [];
-      let gameActive = false,
-        isProcessing = false;
-      let amIReady = false,
-        isEnemyReady = false;
-      let myWins = 0,
-        enemyWins = 0;
-      let myName = "Player1",
-        enemyName = "Enemy";
-      let colorNum = 4; // 選択された色数
+      let peer, conn, myID = Math.floor(1e8 + Math.random() * 9e7).toString();
+      let board, enemyBoard, activePuyo, enemyActivePuyo, score = 0, enemyScore = 0, myOjama = 0, enemyOjama = 0;
+      let nextQueue = [], fallingOjamas = [];
+      let gameActive = false, isProcessing = false;
+      let amIReady = false, isEnemyReady = false;
+      let myWins = 0, enemyWins = 0;
+      let myName = "Player1", enemyName = "Enemy";
+      let colorNum = 4;
       const WIN_GOAL = 2;
 
       const myCtx = document.getElementById("my-canvas").getContext("2d");
       const enemyCtx = document.getElementById("enemy-canvas").getContext("2d");
-      const ROWS = 12,
-        COLS = 6,
-        SIZE = 40;
-      const COLORS = [
-        null,
-        "#ef4444", // 赤
-        "#22c55e", // 緑
-        "#3b82f6", // 青
-        "#eab308", // 黄
-        "#a855f7", // 紫
-      ];
+      const ROWS = 12, COLS = 6, SIZE = 25; // SIZEを25に修正 (150/6=25)
+      const COLORS = [null, "#ef4444", "#22c55e", "#3b82f6", "#eab308", "#a855f7"];
 
       peer = new Peer(myID);
-      peer.on(
-        "open",
-        (id) =>
-          (document.getElementById("my-id-display").innerText = "ID: " + id),
-      );
-      peer.on("connection", (c) => {
-        conn = c;
-        setupConn();
-      });
+      peer.on("open", (id) => (document.getElementById("my-id-display").innerText = "ID: " + id));
+      peer.on("connection", (c) => { conn = c; setupConn(); });
 
       document.getElementById("connect-btn").onclick = () => {
         play("btn");
         const tid = document.getElementById("target-id").value;
-        if (tid) {
-          conn = peer.connect(tid);
-          setupConn();
-        }
+        if (tid) { conn = peer.connect(tid); setupConn(); }
       };
 
       function selectColorNum(num) {
-        if (amIReady) return; // 準備完了後は変更不可
+        if (amIReady) return;
         play("move");
         colorNum = num;
         document.getElementById("opt-4").classList.toggle("active", num === 4);
@@ -411,18 +326,13 @@
           document.getElementById("view-connect").style.display = "none";
           document.getElementById("view-ready").style.display = "block";
         });
-
         conn.on("data", (data) => {
           if (data.type === "READY_SIGNAL") {
             isEnemyReady = true;
             enemyName = data.name || "Enemy";
-            colorNum = data.colorNum; // 相手の色数設定を同期
-            document
-              .getElementById("opt-4")
-              .classList.toggle("active", colorNum === 4);
-            document
-              .getElementById("opt-5")
-              .classList.toggle("active", colorNum === 5);
+            colorNum = data.colorNum;
+            document.getElementById("opt-4").classList.toggle("active", colorNum === 4);
+            document.getElementById("opt-5").classList.toggle("active", colorNum === 5);
             document.getElementById("enemy-name-display").innerText = enemyName;
             checkStart();
           }
@@ -431,28 +341,11 @@
             enemyActivePuyo = data.active;
             enemyScore = data.score;
             enemyOjama = data.ojama;
-            if (data.name) {
-              enemyName = data.name;
-              document.getElementById("enemy-name-display").innerText =
-                enemyName;
-            }
             drawEnemy();
           }
-          if (data.type === "ATTACK") {
-            myOjama += data.amount;
-            updateOjamaUI();
-          }
+          if (data.type === "ATTACK") { myOjama += data.amount; updateOjamaUI(); }
           if (data.type === "GAMEOVER") endGame("WIN");
-          if (data.type === "NEXT_MATCH_READY") {
-            isEnemyReady = true;
-            colorNum = data.colorNum; // 相手の設定に合わせる
-            checkStart();
-          }
-        });
-
-        conn.on("close", () => {
-          alert("相手との接続が切れました。");
-          location.reload();
+          if (data.type === "NEXT_MATCH_READY") { isEnemyReady = true; checkStart(); }
         });
       }
 
@@ -462,80 +355,28 @@
         myName = document.getElementById("my-name-input").value || "Player1";
         document.getElementById("my-name-display").innerText = myName;
         document.getElementById("ready-btn").disabled = true;
-        document.getElementById("ready-btn").innerText = "待機中...";
-        // 自分の色数設定を相手に送る
         conn.send({ type: "READY_SIGNAL", name: myName, colorNum: colorNum });
         checkStart();
       };
 
-      document.getElementById("next-match-btn").onclick = () => {
-        play("btn");
-        amIReady = true;
-        document.getElementById("view-result").style.display = "none";
-        document.getElementById("view-ready").style.display = "block";
-        document.getElementById("ready-status").innerText = "NEXT MATCH";
-        document.getElementById("sync-msg").innerText =
-          "相手の準備を待っています...";
-        document.getElementById("ready-btn").style.display = "none";
-        conn.send({ type: "NEXT_MATCH_READY", colorNum: colorNum });
-        checkStart();
-      };
-
-      document.getElementById("rematch-btn").onclick = () => {
-        play("btn");
-        myWins = 0;
-        enemyWins = 0;
-        updateStarUI();
-
-        document.getElementById("view-result").style.display = "none";
-        document.getElementById("view-ready").style.display = "block";
-        document.getElementById("ready-status").innerText = "REMATCH";
-        document.getElementById("sync-msg").innerText =
-          "設定を確認して準備完了を押してください";
-
-        const rBtn = document.getElementById("ready-btn");
-        rBtn.style.display = "block";
-        rBtn.disabled = false;
-        rBtn.innerText = "準備完了";
-
-        amIReady = false;
-        isEnemyReady = false;
-      };
-
-      function checkStart() {
-        if (amIReady && isEnemyReady) {
-          amIReady = false;
-          isEnemyReady = false;
-          document.getElementById("view-ready").style.display = "none";
-          document.getElementById("ready-btn").disabled = false;
-          document.getElementById("ready-btn").innerText = "準備完了";
-          startGame();
-        }
-      }
+      function checkStart() { if (amIReady && isEnemyReady) { amIReady = false; isEnemyReady = false; startGame(); } }
 
       function startGame() {
         document.getElementById("ui-overlay").style.display = "none";
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        enemyBoard = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
-        score = 0;
-        myOjama = 0;
-        fallingOjamas = [];
+        score = 0; myOjama = 0;
         nextQueue = Array.from({ length: 3 }, () => ({ c1: rnd(), c2: rnd() }));
-        updateStarUI();
         spawnPuyo();
         gameActive = true;
         requestAnimationFrame(renderLoop);
       }
 
-      function rnd() {
-        return Math.floor(Math.random() * colorNum) + 1;
-      }
+      function rnd() { return Math.floor(Math.random() * colorNum) + 1; }
 
       function spawnPuyo() {
         activePuyo = { x: 2, y: 0, rot: 0, ...nextQueue.shift() };
         nextQueue.push({ c1: rnd(), c2: rnd() });
         updateNextUI();
-        // 湧き潰し判定（(2,0)の位置にすでにぷよがあるか、次のが置けない場合）
         if (!canMove(0, 0, 0, activePuyo) || board[0][2] !== 0) {
           endGame("LOSE");
           conn.send({ type: "GAMEOVER" });
@@ -545,80 +386,42 @@
 
       setInterval(() => {
         if (gameActive && !isProcessing) {
-          if (canMove(0, 1, 0, activePuyo)) {
-            activePuyo.y++;
-            sync();
-          } else {
-            lockPuyo();
-          }
+          if (canMove(0, 1, 0, activePuyo)) { activePuyo.y++; sync(); } 
+          else { lockPuyo(); }
         }
       }, 800);
 
       function canMove(dx, dy, dr, p) {
         if (!p) return false;
         const nr = (p.rot + dr + 4) % 4;
-        const ox = [0, 1, 0, -1][nr],
-          oy = [-1, 0, 1, 0][nr];
-        const pts = [
-          { x: p.x + dx, y: p.y + dy },
-          { x: p.x + dx + ox, y: p.y + dy + oy },
-        ];
-        return pts.every(
-          (pt) =>
-            pt.x >= 0 &&
-            pt.x < COLS &&
-            pt.y < ROWS &&
-            (pt.y < 0 || board[pt.y][pt.x] === 0),
-        );
+        const ox = [0, 1, 0, -1][nr], oy = [-1, 0, 1, 0][nr];
+        const pts = [{ x: p.x + dx, y: p.y + dy }, { x: p.x + dx + ox, y: p.y + dy + oy }];
+        return pts.every(pt => pt.x >= 0 && pt.x < COLS && pt.y < ROWS && (pt.y < 0 || board[pt.y][pt.x] === 0));
       }
 
       function handleInput(type) {
         if (!gameActive || isProcessing) return;
-        if (type === "left" && canMove(-1, 0, 0, activePuyo)) {
-          activePuyo.x--;
-          play("move");
-        }
-        if (type === "right" && canMove(1, 0, 0, activePuyo)) {
-          activePuyo.x++;
-          play("move");
-        }
-        if (type === "down" && canMove(0, 1, 0, activePuyo)) {
-          activePuyo.y++;
-          play("move");
-        }
+        if (type === "left" && canMove(-1, 0, 0, activePuyo)) { activePuyo.x--; play("move"); }
+        if (type === "right" && canMove(1, 0, 0, activePuyo)) { activePuyo.x++; play("move"); }
+        if (type === "down" && canMove(0, 1, 0, activePuyo)) { activePuyo.y++; play("move"); }
         if (type === "rotR") tryRotate(1);
         if (type === "rotL") tryRotate(-1);
-        if (type === "up") {
-          while (canMove(0, 1, 0, activePuyo)) activePuyo.y++;
-          lockPuyo();
-        }
+        if (type === "up") { while (canMove(0, 1, 0, activePuyo)) activePuyo.y++; lockPuyo(); }
         sync();
       }
 
       function tryRotate(dr) {
-        if (canMove(0, 0, dr, activePuyo)) {
-          activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
-          play("rot");
-        } else if (canMove(-1, 0, dr, activePuyo)) {
-          activePuyo.x--;
-          activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
-          play("rot");
-        } else if (canMove(1, 0, dr, activePuyo)) {
-          activePuyo.x++;
-          activePuyo.rot = (activePuyo.rot + dr + 4) % 4;
-          play("rot");
-        }
+        if (canMove(0, 0, dr, activePuyo)) { activePuyo.rot = (activePuyo.rot + dr + 4) % 4; play("rot"); }
+        else if (canMove(-1, 0, dr, activePuyo)) { activePuyo.x--; activePuyo.rot = (activePuyo.rot + dr + 4) % 4; play("rot"); }
+        else if (canMove(1, 0, dr, activePuyo)) { activePuyo.x++; activePuyo.rot = (activePuyo.rot + dr + 4) % 4; play("rot"); }
       }
 
       async function lockPuyo() {
         if (isProcessing) return;
         isProcessing = true;
-        const ox = [0, 1, 0, -1][activePuyo.rot],
-          oy = [-1, 0, 1, 0][activePuyo.rot];
-        if (activePuyo.y >= 0)
-          board[activePuyo.y][activePuyo.x] = activePuyo.c1;
-        if (activePuyo.y + oy >= 0)
-          board[activePuyo.y + oy][activePuyo.x + ox] = activePuyo.c2;
+        const ox = [0, 1, 0, -1][activePuyo.rot], oy = [-1, 0, 1, 0][activePuyo.rot];
+        if (activePuyo.y >= 0) board[activePuyo.y][activePuyo.x] = activePuyo.c1;
+        if (activePuyo.y + oy >= 0) board[activePuyo.y + oy][activePuyo.x + ox] = activePuyo.c2;
         play("set");
         activePuyo = null;
         await handleChain();
@@ -635,51 +438,23 @@
             dropped = false;
             for (let y = ROWS - 2; y >= 0; y--) {
               for (let x = 0; x < COLS; x++) {
-                if (board[y][x] && !board[y + 1][x]) {
-                  board[y + 1][x] = board[y][x];
-                  board[y][x] = 0;
-                  dropped = true;
-                }
+                if (board[y][x] && !board[y + 1][x]) { board[y + 1][x] = board[y][x]; board[y][x] = 0; dropped = true; }
               }
             }
-            if (dropped) {
-              sync();
-              await new Promise((r) => setTimeout(r, 60));
-            }
+            if (dropped) { sync(); await new Promise(r => setTimeout(r, 60)); }
           }
           const matches = findMatches();
           if (matches.length === 0) break;
-
           play("pop");
-          const toRemove = [...matches];
-          matches.forEach((m) => {
-            const neighbors = [
-              { x: m.x + 1, y: m.y },
-              { x: m.x - 1, y: m.y },
-              { x: m.x, y: m.y + 1 },
-              { x: m.x, y: m.y - 1 },
-            ];
-            neighbors.forEach((n) => {
-              if (n.x >= 0 && n.x < COLS && n.y >= 0 && n.y < ROWS) {
-                if (board[n.y][n.x] === 9) {
-                  toRemove.push({ x: n.x, y: n.y });
-                }
-              }
-            });
-          });
-
-          toRemove.forEach((p) => (board[p.y][p.x] = 0));
+          matches.forEach(p => (board[p.y][p.x] = 0));
           score += matches.length * 10 * chain;
-
           if (matches.length >= 4) {
-            let attackPower = Math.floor(matches.length / 2);
-            if (chain > 1) attackPower += chain * 2;
-            conn.send({ type: "ATTACK", amount: attackPower });
+            let atk = Math.floor(matches.length / 2) + (chain > 1 ? chain * 2 : 0);
+            conn.send({ type: "ATTACK", amount: atk });
           }
-
           chain++;
           sync();
-          await new Promise((r) => setTimeout(r, 400));
+          await new Promise(r => setTimeout(r, 400));
         }
       }
 
@@ -688,67 +463,25 @@
         let count = Math.min(myOjama, 30);
         myOjama -= count;
         updateOjamaUI();
-        let currentFalling = [];
         for (let i = 0; i < count; i++) {
           let x = i % 6;
-          let targetY = -1;
-          for (let ty = ROWS - 1; ty >= 0; ty--) {
-            if (
-              board[ty][x] === 0 &&
-              !currentFalling.some((f) => f.x === x && f.targetY === ty)
-            ) {
-              targetY = ty;
-              break;
-            }
-          }
-          if (targetY !== -1) currentFalling.push({ x, y: -2, targetY });
+          for (let ty = ROWS - 1; ty >= 0; ty--) { if (board[ty][x] === 0) { board[ty][x] = 9; break; } }
         }
-        while (currentFalling.some((f) => f.y < f.targetY)) {
-          currentFalling.forEach((f) => {
-            if (f.y < f.targetY) f.y += 0.5;
-          });
-          fallingOjamas = currentFalling;
-          sync();
-          await new Promise((r) => setTimeout(r, 20));
-        }
-        currentFalling.forEach((f) => {
-          if (f.targetY >= 0) board[f.targetY][f.x] = 9;
-        });
-        fallingOjamas = [];
-        play("set");
         sync();
       }
 
       function findMatches() {
         let matched = [];
-        let visited = Array.from({ length: ROWS }, () =>
-          Array(COLS).fill(false),
-        );
+        let visited = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
             if (board[y][x] && board[y][x] !== 9 && !visited[y][x]) {
-              let group = [],
-                color = board[y][x],
-                stack = [{ x, y }];
+              let group = [], color = board[y][x], stack = [{ x, y }];
               while (stack.length) {
                 let curr = stack.pop();
-                if (
-                  curr.x < 0 ||
-                  curr.x >= COLS ||
-                  curr.y < 0 ||
-                  curr.y >= ROWS ||
-                  visited[curr.y][curr.x] ||
-                  board[curr.y][curr.x] !== color
-                )
-                  continue;
-                visited[curr.y][curr.x] = true;
-                group.push(curr);
-                stack.push(
-                  { x: curr.x + 1, y: curr.y },
-                  { x: curr.x - 1, y: curr.y },
-                  { x: curr.x, y: curr.y + 1 },
-                  { x: curr.x, y: curr.y - 1 },
-                );
+                if (curr.x < 0 || curr.x >= COLS || curr.y < 0 || curr.y >= ROWS || visited[curr.y][curr.x] || board[curr.y][curr.x] !== color) continue;
+                visited[curr.y][curr.x] = true; group.push(curr);
+                stack.push({ x: curr.x + 1, y: curr.y }, { x: curr.x - 1, y: curr.y }, { x: curr.x, y: curr.y + 1 }, { x: curr.x, y: curr.y - 1 });
               }
               if (group.length >= 4) matched.push(...group);
             }
@@ -757,48 +490,27 @@
         return matched;
       }
 
-      function sync() {
-        if (conn?.open)
-          conn.send({
-            type: "SYNC",
-            board,
-            active: activePuyo,
-            score,
-            ojama: myOjama,
-            name: myName,
-          });
-      }
+      function sync() { if (conn?.open) conn.send({ type: "SYNC", board, active: activePuyo, score, ojama: myOjama, name: myName }); }
 
       function renderLoop() {
         if (!gameActive) return;
-        myCtx.clearRect(0, 0, 240, 480);
-        board.forEach((r, y) =>
-          r.forEach((v, x) => {
-            if (v) drawPuyo(myCtx, x, y, v);
-          }),
-        );
+        myCtx.clearRect(0, 0, 150, 300);
+        board.forEach((r, y) => r.forEach((v, x) => { if (v) drawPuyo(myCtx, x, y, v); }));
         if (activePuyo && !isProcessing) {
-          const ox = [0, 1, 0, -1][activePuyo.rot],
-            oy = [-1, 0, 1, 0][activePuyo.rot];
+          const ox = [0, 1, 0, -1][activePuyo.rot], oy = [-1, 0, 1, 0][activePuyo.rot];
           drawPuyo(myCtx, activePuyo.x, activePuyo.y, activePuyo.c1);
           drawPuyo(myCtx, activePuyo.x + ox, activePuyo.y + oy, activePuyo.c2);
         }
-        fallingOjamas.forEach((f) => drawPuyo(myCtx, f.x, f.y, 9));
         document.getElementById("my-score").innerText = score;
         requestAnimationFrame(renderLoop);
       }
 
       function drawEnemy() {
-        enemyCtx.clearRect(0, 0, 240, 480);
-        enemyBoard?.forEach((r, y) =>
-          r.forEach((v, x) => {
-            if (v) drawPuyo(enemyCtx, x, y, v);
-          }),
-        );
+        enemyCtx.clearRect(0, 0, 150, 300);
+        enemyBoard?.forEach((r, y) => r.forEach((v, x) => { if (v) drawPuyo(enemyCtx, x, y, v); }));
         if (enemyActivePuyo) {
           const a = enemyActivePuyo;
-          const ox = [0, 1, 0, -1][a.rot],
-            oy = [-1, 0, 1, 0][a.rot];
+          const ox = [0, 1, 0, -1][a.rot], oy = [-1, 0, 1, 0][a.rot];
           drawPuyo(enemyCtx, a.x, a.y, a.c1);
           drawPuyo(enemyCtx, a.x + ox, a.y + oy, a.c2);
         }
@@ -808,61 +520,14 @@
 
       function drawPuyo(ctx, x, y, v) {
         if (y < -1 && v !== 9) return;
-        
-        const cx = x * SIZE + SIZE / 2;
-        const cy = y * SIZE + SIZE / 2;
-        const radius = SIZE / 2 - 2;
-
-        if (v === 9) {
-          // お邪魔ぷよの描画
-          ctx.fillStyle = "#cbd5e1"; // 薄いグレー
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // お邪魔ぷよの目（無機質な感じに）
-          ctx.fillStyle = "#475569";
-          ctx.beginPath();
-          // 左目（バツ）
-          const ox = cx - SIZE/5;
-          const oy = cy - SIZE/10;
-          const sz = SIZE/8;
-          ctx.moveTo(ox - sz, oy - sz); ctx.lineTo(ox + sz, oy + sz);
-          ctx.moveTo(ox + sz, oy - sz); ctx.lineTo(ox - sz, oy + sz);
-          // 右目（バツ）
-          const ox2 = cx + SIZE/5;
-          ctx.moveTo(ox2 - sz, oy - sz); ctx.lineTo(ox2 + sz, oy + sz);
-          ctx.moveTo(ox2 + sz, oy - sz); ctx.lineTo(ox2 - sz, oy + sz);
-          ctx.lineWidth = 2;
-          ctx.strokeStyle = "#475569";
-          ctx.stroke();
-          
-        } else {
-          // 通常ぷよの描画
-          ctx.fillStyle = COLORS[v];
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-          ctx.fill();
-          
-          // 白目
+        const cx = x * SIZE + SIZE / 2, cy = y * SIZE + SIZE / 2, r = SIZE / 2 - 2;
+        ctx.fillStyle = v === 9 ? "#cbd5e1" : COLORS[v];
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+        if (v !== 9) {
           ctx.fillStyle = "white";
-          ctx.beginPath();
-          ctx.arc(cx - SIZE/5, cy - SIZE/10, SIZE/6, 0, Math.PI * 2); // 左
-          ctx.arc(cx + SIZE/5, cy - SIZE/10, SIZE/6, 0, Math.PI * 2); // 右
-          ctx.fill();
-          
-          // 黒目（少し内側に寄せる）
+          ctx.beginPath(); ctx.arc(cx - SIZE/5, cy - SIZE/10, SIZE/6, 0, Math.PI*2); ctx.arc(cx + SIZE/5, cy - SIZE/10, SIZE/6, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = "black";
-          ctx.beginPath();
-          ctx.arc(cx - SIZE/7, cy - SIZE/10, SIZE/12, 0, Math.PI * 2); // 左
-          ctx.arc(cx + SIZE/7, cy - SIZE/10, SIZE/12, 0, Math.PI * 2); // 右
-          ctx.fill();
-
-          // ハイライト
-          ctx.fillStyle = "rgba(255,255,255,0.5)";
-          ctx.beginPath();
-          ctx.arc(cx - SIZE/3, cy - SIZE/3, SIZE/10, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.arc(cx - SIZE/7, cy - SIZE/10, SIZE/12, 0, Math.PI*2); ctx.arc(cx + SIZE/7, cy - SIZE/10, SIZE/12, 0, Math.PI*2); ctx.fill();
         }
       }
 
@@ -870,15 +535,8 @@
         [1, 2].forEach((i) => {
           const box = document.getElementById(`next${i}`);
           const p = nextQueue[i - 1];
-          // NEXTエリアのぷよは以前の簡易描画のまま（CSS gradientなどで綺麗にする余地あり）
-          box.innerHTML = `<div style="width:26px; height:26px; border-radius:50%; background:${COLORS[p.c2]}; margin-bottom:4px; border:1px solid rgba(0,0,0,0.2); position:relative;">
-                             <div style="position:absolute; width:6px; height:6px; background:white; border-radius:50%; top:4px; left:4px;"></div>
-                             <div style="position:absolute; width:6px; height:6px; background:white; border-radius:50%; top:4px; right:4px;"></div>
-                           </div>
-                           <div style="width:26px; height:26px; border-radius:50%; background:${COLORS[p.c1]}; border:1px solid rgba(0,0,0,0.2); position:relative;">
-                             <div style="position:absolute; width:6px; height:6px; background:white; border-radius:50%; top:4px; left:4px;"></div>
-                             <div style="position:absolute; width:6px; height:6px; background:white; border-radius:50%; top:4px; right:4px;"></div>
-                           </div>`;
+          box.innerHTML = `<div style="width:20px;height:20px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;"></div>
+                           <div style="width:20px;height:20px;border-radius:50%;background:${COLORS[p.c1]};"></div>`;
         });
       }
 
@@ -888,61 +546,32 @@
         document.getElementById("enemy-ojama-bar").innerText = bar(enemyOjama);
       }
 
-      function updateStarUI() {
-        document.getElementById("my-stars").innerText =
-          "★".repeat(myWins) + "☆".repeat(WIN_GOAL - myWins);
-        document.getElementById("enemy-stars").innerText =
-          "★".repeat(enemyWins) + "☆".repeat(WIN_GOAL - enemyWins);
-      }
-
       function endGame(res) {
         gameActive = false;
-        if (res === "WIN") myWins++;
-        else enemyWins++;
-        updateStarUI();
-        const matchResult = document.getElementById("result-text");
-        const matchStatus = document.getElementById("match-status");
-        const nextBtn = document.getElementById("next-match-btn");
-        const rematchBtn = document.getElementById("rematch-btn");
-        const exitBtn = document.getElementById("exit-btn");
-        matchResult.innerText = res === "WIN" ? "YOU WIN!" : "YOU LOSE...";
-        matchStatus.innerText = `★ ${myWins} - ${enemyWins} ★`;
-        if (myWins >= WIN_GOAL || enemyWins >= WIN_GOAL) {
-          matchResult.innerText =
-            myWins >= WIN_GOAL ? "👑 MATCH WINNER 👑" : "MATCH OVER...";
-          nextBtn.style.display = "none";
-          rematchBtn.style.display = "block";
-          exitBtn.style.display = "block";
-        } else {
-          nextBtn.style.display = "block";
-          nextBtn.disabled = false;
-          nextBtn.innerText = "次の試合へ";
-          rematchBtn.style.display = "none";
-          exitBtn.style.display = "none";
-        }
+        if (res === "WIN") myWins++; else enemyWins++;
+        document.getElementById("my-stars").innerText = "★".repeat(myWins) + "☆".repeat(WIN_GOAL - myWins);
+        document.getElementById("enemy-stars").innerText = "★".repeat(enemyWins) + "☆".repeat(WIN_GOAL - enemyWins);
+        document.getElementById("result-text").innerText = res === "WIN" ? "YOU WIN!" : "YOU LOSE...";
+        document.getElementById("match-status").innerText = `★ ${myWins} - ${enemyWins} ★`;
         document.getElementById("view-result").style.display = "block";
         document.getElementById("ui-overlay").style.display = "flex";
+        if (myWins >= WIN_GOAL || enemyWins >= WIN_GOAL) {
+          document.getElementById("rematch-btn").style.display = "block";
+          document.getElementById("exit-btn").style.display = "block";
+        } else {
+          document.getElementById("next-match-btn").style.display = "block";
+        }
       }
 
-      const setupBtn = (id, type) => {
-        const el = document.getElementById(id);
-        el.onpointerdown = (e) => {
-          e.preventDefault();
-          handleInput(type);
-        };
-      };
-      setupBtn("m-left", "left");
-      setupBtn("m-right", "right");
-      setupBtn("m-rot-l", "rotL");
-      setupBtn("m-rot-r", "rotR");
-      setupBtn("m-down", "up");
+      const setupBtn = (id, type) => { document.getElementById(id).onpointerdown = (e) => { e.preventDefault(); handleInput(type); }; };
+      setupBtn("m-left", "left"); setupBtn("m-right", "right"); setupBtn("m-rot-l", "rotL"); setupBtn("m-rot-r", "rotR"); setupBtn("m-down", "up");
 
       window.onkeydown = (e) => {
         if (e.key === "ArrowLeft") handleInput("left");
         if (e.key === "ArrowRight") handleInput("right");
         if (e.key === "ArrowDown") handleInput("down");
-        if (e.key === "ArrowUp") handleInput("rotL");
-        if (e.key === "Shift") handleInput("rotR");
+        if (e.key === "ArrowUp" || e.key === "z") handleInput("rotL");
+        if (e.key === "x") handleInput("rotR");
         if (e.key === " ") handleInput("up");
       };
     </script>
