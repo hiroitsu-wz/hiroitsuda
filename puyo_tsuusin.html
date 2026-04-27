@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MARUICHI Online - Fixed</title>
+    <title>MARUICHI Online - Evolution</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
       html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #0f172a; touch-action: none; color: white; font-family: "Segoe UI", sans-serif; display: flex; flex-direction: column; align-items: center; }
@@ -173,7 +173,20 @@
             if (dropped) { sync(); await new Promise(r => setTimeout(r, 60)); }
           }
           let matches = findMatches(); if (matches.length === 0) break;
-          play("pop"); matches.forEach(p => board[p.y][p.x] = 0);
+          play("pop");
+          
+          // お邪魔ぷよ消去チェック
+          const toRemove = new Set(matches.map(p => `${p.x},${p.y}`));
+          matches.forEach(p => {
+            const ads = [{x:0,y:1},{x:0,y:-1},{x:1,y:0},{x:-1,y:0}];
+            ads.forEach(ad => {
+              const nx = p.x + ad.x, ny = p.y + ad.y;
+              if (nx>=0 && nx<COLS && ny>=0 && ny<ROWS && board[ny][nx] === 9) toRemove.add(`${nx},${ny}`);
+            });
+          });
+
+          toRemove.forEach(key => { const [kx, ky] = key.split(",").map(Number); board[ky][kx] = 0; });
+
           conn.send({ type: "ATTACK", amount: Math.floor(matches.length / 2) + (chain > 1 ? chain * 2 : 0) });
           chain++; sync(); await new Promise(r => setTimeout(r, 400));
         }
@@ -196,7 +209,6 @@
         return matched;
       }
 
-      // --- 描画ロジックの修正 (ぷよの目とバッテンのズレ対策) ---
       function drawPuyo(ctx, x, y, v) {
         if (y < 0) return;
         const cx = x * SIZE + SIZE / 2;
@@ -206,14 +218,18 @@
         ctx.fillStyle = v === 9 ? "#cbd5e1" : COLORS[v];
         ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
         
-        if (v !== 9) {
-          // 白目
+        if (v === 9) { // お邪魔ぷよの目
+          ctx.fillStyle = "white";
+          ctx.beginPath();
+          ctx.arc(cx - r/4, cy, r/6, 0, Math.PI * 2);
+          ctx.arc(cx + r/4, cy, r/6, 0, Math.PI * 2);
+          ctx.fill();
+        } else { // 普通のぷよの目
           ctx.fillStyle = "white";
           ctx.beginPath();
           ctx.arc(cx - r/3, cy, r/4, 0, Math.PI * 2);
           ctx.arc(cx + r/3, cy, r/4, 0, Math.PI * 2);
           ctx.fill();
-          // 黒目 (中心に寄せる)
           ctx.fillStyle = "black";
           ctx.beginPath();
           ctx.arc(cx - r/3, cy, r/8, 0, Math.PI * 2);
@@ -227,12 +243,14 @@
         ctx.strokeStyle = "#ef4444";
         ctx.lineWidth = 3;
         ctx.lineCap = "round";
-        const m = SIZE * 0.2; // マージンをサイズに比例させる
+        const m = SIZE * 0.25;
+        const cx = x * SIZE + SIZE / 2;
+        const cy = y * SIZE + SIZE / 2;
         ctx.beginPath();
-        ctx.moveTo(x * SIZE + m, y * SIZE + m);
-        ctx.lineTo((x + 1) * SIZE - m, (y + 1) * SIZE - m);
-        ctx.moveTo((x + 1) * SIZE - m, y * SIZE + m);
-        ctx.lineTo(x * SIZE + m, (y + 1) * SIZE - m);
+        ctx.moveTo(cx - (SIZE/2 - m), cy - (SIZE/2 - m));
+        ctx.lineTo(cx + (SIZE/2 - m), cy + (SIZE/2 - m));
+        ctx.moveTo(cx + (SIZE/2 - m), cy - (SIZE/2 - m));
+        ctx.lineTo(cx - (SIZE/2 - m), cy + (SIZE/2 - m));
         ctx.stroke();
         ctx.restore();
       }
@@ -242,7 +260,6 @@
         myCtx.clearRect(0, 0, 150, 300);
         enemyCtx.clearRect(0, 0, 150, 300);
         
-        // バッテンを背景に描画
         if (board[0][2] === 0) drawX(myCtx, 2, 0);
         if (enemyBoard[0][2] === 0) drawX(enemyCtx, 2, 0);
         
@@ -272,16 +289,22 @@
       }
 
       function sync() { if (conn?.open) conn.send({ type: "SYNC", board, active: activePuyo, ojama: myOjama }); }
+      
       function updateNextUI() {
         [1, 2].forEach(i => {
           const p = nextQueue[i - 1];
-          document.getElementById(`next${i}`).innerHTML = `<div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;display:flex;justify-content:center;align-items:center;"><div style="width:4px;height:4px;background:white;border-radius:50%;"></div></div><div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c1]};display:flex;justify-content:center;align-items:center;"><div style="width:4px;height:4px;background:white;border-radius:50%;"></div></div>`;
+          const eye = `<div style="width:4px;height:4px;background:white;border-radius:50%;margin:0 1px;"></div>`;
+          document.getElementById(`next${i}`).innerHTML = `
+            <div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>
+            <div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c1]};display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>`;
         });
       }
+
       function updateOjamaUI() {
         document.getElementById("my-ojama-bar").innerText = "●".repeat(Math.min(myOjama, 12));
         document.getElementById("enemy-ojama-bar").innerText = "●".repeat(Math.min(enemyOjama, 12));
       }
+
       function endGame(res) {
         gameActive = false;
         if (res === "WIN") myWins++; else enemyWins++;
