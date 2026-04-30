@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>MARUICHI Online - Ultimate</title>
+    <title>MARUICHI Online - Ultimate Edition</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
       html,
@@ -19,7 +19,7 @@
         background-color: #0f172a;
         touch-action: none;
         color: white;
-        font-family: "Segoe UI", sans-serif;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -40,7 +40,7 @@
         position: absolute;
         inset: 0;
         z-index: 1000;
-        background: rgba(15, 23, 42, 0.95);
+        background: rgba(15, 23, 42, 0.9);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -54,6 +54,7 @@
         max-width: 320px;
         text-align: center;
         display: none;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
       }
       #view-connect {
         display: block;
@@ -65,9 +66,13 @@
         width: 90%;
         background: #0f172a;
         color: white;
-        border: 1px solid #334155;
+        border: 1px solid #475569;
         border-radius: 8px;
         outline: none;
+        transition: border 0.3s;
+      }
+      input:focus {
+        border-color: #3b82f6;
       }
       .big-btn {
         margin-top: 10px;
@@ -80,6 +85,13 @@
         font-weight: bold;
         font-size: 18px;
         cursor: pointer;
+        transition:
+          transform 0.1s,
+          background 0.3s;
+      }
+      .big-btn:active {
+        transform: scale(0.98);
+        background: #2563eb;
       }
       .sub-btn {
         margin-top: 10px;
@@ -94,13 +106,13 @@
       }
       .battle-container {
         display: flex;
-        gap: 5px;
+        gap: 10px;
         margin-top: 5px;
         transform-origin: top center;
       }
       @media (max-width: 400px) {
         .battle-container {
-          transform: scale(0.9);
+          transform: scale(0.85);
         }
       }
       .field-wrapper {
@@ -110,14 +122,15 @@
         position: relative;
       }
       canvas {
-        background: rgba(30, 41, 59, 0.95);
-        border: 2px solid #475569;
+        background: rgba(15, 23, 42, 0.8);
+        border: 2px solid #334155;
         border-radius: 8px;
         width: 150px;
         height: 300px;
       }
       .my-field canvas {
         border-color: #3b82f6;
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
       }
       .next-area {
         margin-left: 5px;
@@ -128,7 +141,7 @@
       .next-box {
         width: 35px;
         height: 70px;
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.4);
         border-radius: 8px;
         display: flex;
         flex-direction: column;
@@ -139,38 +152,42 @@
       .controller {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
+        gap: 10px;
         width: 95%;
         max-width: 360px;
-        margin-top: 10px;
+        margin-top: 15px;
       }
       .ctrl-btn {
         background: #334155;
         border: none;
-        border-radius: 12px;
+        border-radius: 15px;
         color: white;
         font-size: 24px;
-        padding: 12px 0;
+        padding: 15px 0;
         touch-action: none;
         user-select: none;
+        cursor: pointer;
+      }
+      .ctrl-btn:active {
+        background: #475569;
       }
       .btn-rot-l {
-        background: #ec4899;
+        background: #db2777;
       }
       .btn-rot-r {
-        background: #8b5cf6;
+        background: #7c3aed;
       }
       .btn-drop {
-        background: #3b82f6;
+        background: #2563eb;
         grid-column: span 4;
-        padding: 10px 0;
+        padding: 12px 0;
         font-size: 16px;
         font-weight: bold;
       }
       .ojama-bar {
-        height: 18px;
-        font-size: 10px;
-        color: #ef4444;
+        height: 20px;
+        font-size: 12px;
+        color: #f87171;
         font-weight: bold;
         width: 150px;
         text-align: center;
@@ -184,7 +201,6 @@
       .name-label {
         font-size: 14px;
         font-weight: bold;
-        color: white;
         margin-bottom: 2px;
         max-width: 150px;
         overflow: hidden;
@@ -192,20 +208,32 @@
         white-space: nowrap;
       }
       .match-score {
-        font-size: 24px;
+        font-size: 28px;
         color: #facc15;
-        margin: 5px 0;
+        margin: 10px 0;
         font-weight: 900;
+        text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
       }
       #countdown-text {
         position: absolute;
-        font-size: 80px;
+        font-size: 100px;
         font-weight: 900;
         color: #facc15;
         z-index: 2000;
         display: none;
         pointer-events: none;
-        top: 40%;
+        top: 30%;
+        text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      }
+      .id-badge {
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 4px;
+        background: #0f172a;
+        border: 1px dashed #38bdf8;
+      }
+      .id-badge:hover {
+        background: #1e293b;
       }
     </style>
   </head>
@@ -215,7 +243,7 @@
 
     <div id="ui-overlay">
       <div id="view-connect" class="modal">
-        <h2>MARUICHI Online</h2>
+        <h2 style="margin-top: 0">MARUICHI Online</h2>
         <input
           type="text"
           id="my-name-input"
@@ -270,17 +298,28 @@
 
     <div
       style="
-        margin-top: 5px;
-        font-size: 16px;
+        margin-top: 10px;
+        font-size: 18px;
         font-weight: bold;
         color: #38bdf8;
+        letter-spacing: 1px;
       "
     >
       MARUICHI Online
     </div>
-    <div style="display: flex; gap: 40px; margin-bottom: 2px">
-      <div id="my-stars" style="color: #facc15; font-size: 18px">☆☆</div>
-      <div id="enemy-stars" style="color: #facc15; font-size: 18px">☆☆</div>
+    <div style="display: flex; gap: 60px; margin-bottom: 5px">
+      <div
+        id="my-stars"
+        style="color: #facc15; font-size: 20px; letter-spacing: 3px"
+      >
+        ☆☆
+      </div>
+      <div
+        id="enemy-stars"
+        style="color: #facc15; font-size: 20px; letter-spacing: 3px"
+      >
+        ☆☆
+      </div>
     </div>
 
     <div class="battle-container">
@@ -317,25 +356,41 @@
     </div>
 
     <script>
+      // SE Settings
       const se = {
-        pop: new Audio("puyo_pop.mp3"),
-        move: new Audio("puyo_move.mp3"),
-        rot: new Audio("puyo_rotate.mp3"),
-        btn: new Audio("puyo_button.mp3"),
-        set: new Audio("puyo_set.mp3"),
-        ojama: new Audio("puyo_ojama.mp3"),
-        count: new Audio("puyo_count.mp3"),
+        pop: new Audio(
+          "https://actions.google.com/sounds/v1/foley/pop_cork.ogg",
+        ),
+        move: new Audio(
+          "https://actions.google.com/sounds/v1/foley/draw_knife_blade.ogg",
+        ),
+        rot: new Audio(
+          "https://actions.google.com/sounds/v1/foley/button_click.ogg",
+        ),
+        btn: new Audio("https://actions.google.com/sounds/v1/foley/click.ogg"),
+        set: new Audio(
+          "https://actions.google.com/sounds/v1/foley/wood_plank_flick.ogg",
+        ),
+        ojama: new Audio(
+          "https://actions.google.com/sounds/v1/foley/crumple_paper.ogg",
+        ),
+        count: new Audio(
+          "https://actions.google.com/sounds/v1/foley/mechanical_clock_tick.ogg",
+        ),
       };
+      // ボリューム調整
+      Object.values(se).forEach((s) => (s.volume = 0.4));
+
       function play(k) {
         if (se[k]) {
-          se[k].currentTime = 0;
-          se[k].play().catch(() => {});
+          const s = se[k].cloneNode();
+          s.play().catch(() => {});
         }
       }
 
       let peer,
         conn,
-        myID = Math.floor(1e8 + Math.random() * 9e7).toString();
+        myID = Math.floor(1e5 + Math.random() * 9e5).toString();
       let myName = "YOU",
         enemyName = "ENEMY";
       let board,
@@ -360,11 +415,11 @@
         SIZE = 25;
       const COLORS = [
         null,
-        "#ef4444",
-        "#22c55e",
-        "#3b82f6",
-        "#eab308",
-        "#a855f7",
+        "#f87171",
+        "#4ade80",
+        "#60a5fa",
+        "#fbbf24",
+        "#c084fc",
       ];
 
       const myCanvas = document.getElementById("my-canvas");
@@ -388,49 +443,55 @@
           this.x = x;
           this.y = y;
           this.color = color;
-          this.vx = (Math.random() - 0.5) * 8;
-          this.vy = (Math.random() - 0.5) * 8;
+          this.vx = (Math.random() - 0.5) * 6;
+          this.vy = (Math.random() - 0.5) * 6;
           this.life = 1.0;
         }
         update() {
           this.x += this.vx;
           this.y += this.vy;
-          this.life -= 0.05;
+          this.life -= 0.04;
         }
         draw(ctx) {
           ctx.globalAlpha = this.life;
           ctx.fillStyle = this.color;
           ctx.beginPath();
-          ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+          ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
           ctx.fill();
           ctx.globalAlpha = 1;
         }
       }
 
+      // PeerJS Initialization
       peer = new Peer(myID);
-      peer.on(
-        "open",
-        (id) =>
-          (document.getElementById("my-id-display").innerText =
-            "YOUR ID: " + id),
-      );
+      peer.on("open", (id) => {
+        const display = document.getElementById("my-id-display");
+        display.innerHTML = `YOUR ID: <span class="id-badge" title="クリックでコピー">${id}</span>`;
+        display.onclick = () => {
+          navigator.clipboard.writeText(id);
+          alert("IDをコピーしました！");
+        };
+      });
       peer.on("error", (err) => {
-        console.error(err);
-        alert("通信エラー: " + err.type);
-        location.reload();
+        if (err.type === "peer-unavailable")
+          alert("相手が見つかりません。IDを確認してください。");
+        else console.error(err);
       });
       peer.on("connection", (c) => {
+        if (conn) return;
         conn = c;
         setupConn();
       });
 
       document.getElementById("connect-btn").onclick = () => {
         play("btn");
-        const tid = document.getElementById("target-id").value;
-        myName = document.getElementById("my-name-input").value || "YOU";
+        const tid = document.getElementById("target-id").value.trim();
+        myName = document.getElementById("my-name-input").value.trim() || "YOU";
         if (tid) {
           conn = peer.connect(tid);
           setupConn();
+        } else {
+          alert("相手のIDを入力してください");
         }
       };
 
@@ -550,8 +611,9 @@
       }
 
       function rnd() {
-        return Math.floor(Math.random() * 4) + 1;
+        return Math.floor(Math.random() * 5) + 1;
       }
+
       function spawnPuyo() {
         if (board[0][2] !== 0) {
           endGame("LOSE");
@@ -564,16 +626,66 @@
         sync();
       }
 
-      setInterval(() => {
-        if (gameActive && !isProcessing) {
-          if (canMove(0, 1, 0, activePuyo)) {
-            activePuyo.y++;
-            sync();
-          } else {
-            lockPuyo();
+      // 自動落下タイマー
+      let dropCounter = 0;
+      function renderLoop(time) {
+        if (!gameActive) return;
+
+        // 自動落下処理（簡易版）
+        if (!isProcessing) {
+          dropCounter++;
+          if (dropCounter > 50) {
+            // 約0.8秒
+            if (canMove(0, 1, 0, activePuyo)) {
+              activePuyo.y++;
+              sync();
+            } else {
+              lockPuyo();
+            }
+            dropCounter = 0;
           }
         }
-      }, 800);
+
+        myCtx.clearRect(0, 0, 150, 300);
+        enemyCtx.clearRect(0, 0, 150, 300);
+
+        drawX(myCtx, 2, 0);
+        drawX(enemyCtx, 2, 0);
+
+        board.forEach((r, y) =>
+          r.forEach((v, x) => {
+            if (v) drawPuyo(myCtx, x, y, v);
+          }),
+        );
+        enemyBoard.forEach((r, y) =>
+          r.forEach((v, x) => {
+            if (v) drawPuyo(enemyCtx, x, y, v);
+          }),
+        );
+
+        if (activePuyo && !isProcessing) {
+          const a = activePuyo,
+            ox = [0, 1, 0, -1][a.rot],
+            oy = [-1, 0, 1, 0][a.rot];
+          drawPuyo(myCtx, a.x, a.y, a.c1, true);
+          drawPuyo(myCtx, a.x + ox, a.y + oy, a.c2, true);
+        }
+        if (enemyActivePuyo) {
+          const a = enemyActivePuyo,
+            ox = [0, 1, 0, -1][a.rot],
+            oy = [-1, 0, 1, 0][a.rot];
+          drawPuyo(enemyCtx, a.x, a.y, a.c1);
+          drawPuyo(enemyCtx, a.x + ox, a.y + oy, a.c2);
+        }
+
+        particles = particles.filter((p) => p.life > 0);
+        particles.forEach((p) => {
+          p.update();
+          p.draw(myCtx);
+        });
+
+        requestAnimationFrame(renderLoop);
+      }
 
       function canMove(dx, dy, dr, p) {
         const nr = (p.rot + dr + 4) % 4,
@@ -612,29 +724,17 @@
         sync();
       }
 
-      // --- 強化版回転ロジック（壁蹴り対応） ---
       function rotate(dr) {
         const nextRot = (activePuyo.rot + dr + 4) % 4;
-        // 1. その場で回転
         if (canMove(0, 0, dr, activePuyo)) {
           activePuyo.rot = nextRot;
           play("rot");
-        } 
-        // 2. 右に1マスずらして試行
-        else if (canMove(1, 0, dr, activePuyo)) {
+        } else if (canMove(1, 0, dr, activePuyo)) {
           activePuyo.x += 1;
           activePuyo.rot = nextRot;
           play("rot");
-        } 
-        // 3. 左に1マスずらして試行
-        else if (canMove(-1, 0, dr, activePuyo)) {
+        } else if (canMove(-1, 0, dr, activePuyo)) {
           activePuyo.x -= 1;
-          activePuyo.rot = nextRot;
-          play("rot");
-        }
-        // 4. 上に1マスずらして試行（接地時の回転対策）
-        else if (canMove(0, -1, dr, activePuyo)) {
-          activePuyo.y -= 1;
           activePuyo.rot = nextRot;
           play("rot");
         }
@@ -673,7 +773,7 @@
             }
             if (dropped) {
               sync();
-              await new Promise((r) => setTimeout(r, 60));
+              await new Promise((r) => setTimeout(r, 80));
             }
           }
           let matches = findMatches();
@@ -681,15 +781,15 @@
           play("pop");
           let puyoCount = matches.length;
           let attackPower =
-            Math.floor(puyoCount / 2) + (chain > 1 ? chain * 3 : 0);
+            Math.floor(puyoCount / 4) + (chain > 1 ? chain * 2 : 0);
           myScore += puyoCount * 10 * chain;
           updateScoreUI();
           matches.forEach((p) => {
-            for (let i = 0; i < 6; i++)
+            for (let i = 0; i < 4; i++)
               particles.push(
                 new Particle(
-                  p.x * SIZE + SIZE / 2,
-                  p.y * SIZE + SIZE / 2,
+                  p.x * SIZE + 12,
+                  p.y * SIZE + 12,
                   COLORS[board[p.y][p.x]],
                 ),
               );
@@ -700,7 +800,6 @@
             attackPower -= offset;
             updateOjamaUI();
           }
-
           const toRemove = new Set(matches.map((p) => `${p.x},${p.y}`));
           matches.forEach((p) => {
             [
@@ -718,7 +817,7 @@
                 ny < ROWS &&
                 board[ny][nx] === 9
               )
-                toRemove.add(`${nx},${ny}`);
+                toRemove.add(`${nx},ny`);
             });
           });
           toRemove.forEach((key) => {
@@ -729,7 +828,7 @@
             conn.send({ type: "ATTACK", amount: attackPower });
           chain++;
           sync();
-          await new Promise((r) => setTimeout(r, 450));
+          await new Promise((r) => setTimeout(r, 500));
         }
       }
 
@@ -769,80 +868,47 @@
         return matched;
       }
 
-      function drawPuyo(ctx, x, y, v) {
+      function drawPuyo(ctx, x, y, v, isActive = false) {
         if (y < 0) return;
         const cx = x * SIZE + SIZE / 2,
           cy = y * SIZE + SIZE / 2,
           r = SIZE * 0.45;
         ctx.fillStyle = v === 9 ? "#cbd5e1" : COLORS[v];
+        if (isActive) {
+          ctx.shadowBlur = 5;
+          ctx.shadowColor = "white";
+        }
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
+        // Eyes
         ctx.fillStyle = "white";
         ctx.beginPath();
         if (v === 9) {
-          ctx.arc(cx - r / 4, cy, r / 6, 0, Math.PI * 2);
-          ctx.arc(cx + r / 4, cy, r / 6, 0, Math.PI * 2);
+          ctx.arc(cx - 4, cy, 2, 0, Math.PI * 2);
+          ctx.arc(cx + 4, cy, 2, 0, Math.PI * 2);
         } else {
-          ctx.arc(cx - r / 3, cy, r / 4, 0, Math.PI * 2);
-          ctx.arc(cx + r / 3, cy, r / 4, 0, Math.PI * 2);
+          ctx.arc(cx - 4, cy, 3, 0, Math.PI * 2);
+          ctx.arc(cx + 4, cy, 3, 0, Math.PI * 2);
           ctx.fill();
           ctx.fillStyle = "black";
           ctx.beginPath();
-          ctx.arc(cx - r / 3, cy, r / 8, 0, Math.PI * 2);
-          ctx.arc(cx + r / 3, cy, r / 8, 0, Math.PI * 2);
+          ctx.arc(cx - 4, cy, 1.5, 0, Math.PI * 2);
+          ctx.arc(cx + 4, cy, 1.5, 0, Math.PI * 2);
         }
         ctx.fill();
       }
 
       function drawX(ctx, x, y) {
         ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 3;
-        const m = 6;
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x * SIZE + m, y * SIZE + m);
-        ctx.lineTo((x + 1) * SIZE - m, (y + 1) * SIZE - m);
-        ctx.moveTo((x + 1) * SIZE - m, y * SIZE + m);
-        ctx.lineTo(x * SIZE + m, (y + 1) * SIZE - m);
+        ctx.moveTo(x * SIZE + 5, y * SIZE + 5);
+        ctx.lineTo((x + 1) * SIZE - 5, (y + 1) * SIZE - 5);
+        ctx.moveTo((x + 1) * SIZE - 5, y * SIZE + 5);
+        ctx.lineTo(x * SIZE + 5, (y + 1) * SIZE - 5);
         ctx.stroke();
-      }
-
-      function renderLoop() {
-        if (!gameActive) return;
-        myCtx.clearRect(0, 0, myCanvas.width, myCanvas.height);
-        enemyCtx.clearRect(0, 0, enemyCanvas.width, enemyCanvas.height);
-        drawX(myCtx, 2, 0);
-        drawX(enemyCtx, 2, 0);
-        board.forEach((r, y) =>
-          r.forEach((v, x) => {
-            if (v) drawPuyo(myCtx, x, y, v);
-          }),
-        );
-        enemyBoard.forEach((r, y) =>
-          r.forEach((v, x) => {
-            if (v) drawPuyo(enemyCtx, x, y, v);
-          }),
-        );
-        if (activePuyo && !isProcessing) {
-          const a = activePuyo,
-            ox = [0, 1, 0, -1][a.rot],
-            oy = [-1, 0, 1, 0][a.rot];
-          drawPuyo(myCtx, a.x, a.y, a.c1);
-          drawPuyo(myCtx, a.x + ox, a.y + oy, a.c2);
-        }
-        if (enemyActivePuyo) {
-          const a = enemyActivePuyo,
-            ox = [0, 1, 0, -1][a.rot],
-            oy = [-1, 0, 1, 0][a.rot];
-          drawPuyo(enemyCtx, a.x, a.y, a.c1);
-          drawPuyo(enemyCtx, a.x + ox, a.y + oy, a.c2);
-        }
-        particles = particles.filter((p) => p.life > 0);
-        particles.forEach((p) => {
-          p.update();
-          p.draw(myCtx);
-        });
-        requestAnimationFrame(renderLoop);
       }
 
       async function dropOjama() {
@@ -864,7 +930,7 @@
           }
           count -= lineCount;
           sync();
-          await new Promise((r) => setTimeout(r, 150));
+          await new Promise((r) => setTimeout(r, 100));
         }
       }
 
@@ -891,10 +957,10 @@
       }
       function updateNextUI() {
         [1, 2].forEach((i) => {
-          const p = nextQueue[i - 1],
-            eye = `<div style="width:4px;height:4px;background:white;border-radius:50%;margin:0 1px;"></div>`;
-          document.getElementById(`next${i}`).innerHTML =
-            `<div style="width:16px;height:16px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;display:flex;justify-content:center;align-items:center;">${eye}${eye}</div><div style="width:16px;height:16px;border-radius:50%;background:${COLORS[p.c1]};display:flex;justify-content:center;align-items:center;">${eye}${eye}</div>`;
+          const p = nextQueue[i - 1];
+          const box = document.getElementById(`next${i}`);
+          box.innerHTML = `<div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;border:1px solid rgba(255,255,255,0.2)"></div>
+                           <div style="width:18px;height:18px;border-radius:50%;background:${COLORS[p.c1]};border:1px solid rgba(255,255,255,0.2)"></div>`;
         });
       }
 
@@ -902,40 +968,26 @@
         gameActive = false;
         if (res === "WIN") myWins++;
         else enemyWins++;
-
-        const myStarStr = "★".repeat(myWins) + "☆".repeat(WIN_GOAL - myWins);
-        const enemyStarStr =
+        document.getElementById("my-stars").innerText =
+          "★".repeat(myWins) + "☆".repeat(WIN_GOAL - myWins);
+        document.getElementById("enemy-stars").innerText =
           "★".repeat(enemyWins) + "☆".repeat(WIN_GOAL - enemyWins);
-        document.getElementById("my-stars").innerText = myStarStr;
-        document.getElementById("enemy-stars").innerText = enemyStarStr;
-
-        const nextBtn = document.getElementById("next-match-btn");
         const resultTitle = document.getElementById("result-text");
-
         if (myWins === WIN_GOAL || enemyWins === WIN_GOAL) {
-          const isFinalWin = myWins === WIN_GOAL;
-          resultTitle.innerText = isFinalWin
-            ? "MATCH WINNER!"
-            : "MATCH LOST...";
-          resultTitle.style.color = isFinalWin ? "#facc15" : "#ef4444";
-          nextBtn.innerText = "もう一度対戦(リマッチ)";
+          resultTitle.innerText =
+            myWins === WIN_GOAL ? "MATCH WINNER!" : "MATCH LOST...";
+          resultTitle.style.color = myWins === WIN_GOAL ? "#facc15" : "#ef4444";
         } else {
           resultTitle.innerText = res === "WIN" ? "YOU WIN!" : "YOU LOSE...";
-          resultTitle.style.color = "white";
-          nextBtn.innerText = "次の試合へ";
         }
-
         document.getElementById("match-status").innerText =
           `★ ${myWins} - ${enemyWins} ★`;
         showModal("view-result");
       }
 
-      // --- 入力制御セクション ---
-
-      // キーボード操作の設定
+      // Input Controls
       window.addEventListener("keydown", (e) => {
         if (!gameActive || isProcessing) return;
-
         switch (e.code) {
           case "ArrowLeft":
             handleInput("left");
@@ -947,27 +999,27 @@
             handleInput("down");
             break;
           case "ArrowUp":
-            handleInput("rotR"); // 右回転
+            handleInput("rotR");
             break;
-          case "ShiftLeft":
-          case "ShiftRight":
-            handleInput("rotL"); // 左回転
+          case "KeyX":
+            handleInput("rotR");
+            break;
+          case "KeyZ":
+            handleInput("rotL");
             break;
           case "Space":
-            e.preventDefault(); // スクロール防止
-            handleInput("drop"); // 急落下
+            e.preventDefault();
+            handleInput("drop");
             break;
         }
       });
 
-      // ボタン操作（スマホ用）の設定
       const setupBtn = (id, type) => {
         const btn = document.getElementById(id);
-        const handler = (e) => {
+        btn.addEventListener("pointerdown", (e) => {
           e.preventDefault();
           handleInput(type);
-        };
-        btn.addEventListener("pointerdown", handler);
+        });
       };
       setupBtn("m-left", "left");
       setupBtn("m-right", "right");
