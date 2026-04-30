@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MARUICHI Online - Personal Difficulty</title>
+    <title>MARUICHI Online - 4-Digit ID</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
       html, body {
@@ -70,14 +70,14 @@
       <div id="view-connect" class="modal">
         <h2>MARUICHI Online</h2>
         <input type="text" id="my-name-input" placeholder="あなたの名前" maxlength="10" />
-        <p id="my-id-display" style="color: #38bdf8; font-size: 12px">ID発行中...</p>
+        <p id="my-id-display" style="color: #38bdf8; font-size: 18px; font-weight: bold; letter-spacing: 2px;">ID発行中...</p>
         <div style="font-size: 12px; color: #94a3b8; margin-top: 10px">自分の難易度設定</div>
         <div class="difficulty-selector">
           <button class="diff-btn active" onclick="setDifficulty(4, this)">4色</button>
           <button class="diff-btn" onclick="setDifficulty(5, this)">5色</button>
         </div>
         <hr style="border: 0; border-top: 1px solid #334155; margin: 15px 0" />
-        <input type="tel" id="target-id" placeholder="相手のIDを入力" />
+        <input type="tel" id="target-id" placeholder="相手の4桁IDを入力" maxlength="4" />
         <button class="big-btn" id="connect-btn">対戦を申し込む</button>
       </div>
       <div id="view-ready" class="modal">
@@ -91,10 +91,6 @@
         <div id="match-status" class="match-score">★ 0 - 0 ★</div>
         <button class="big-btn" id="next-match-btn">次の試合へ</button>
         <button class="sub-btn" onclick="location.reload()">終了</button>
-      </div>
-      <div id="view-disconnect" class="modal">
-        <h2>DISCONNECTED</h2>
-        <button class="big-btn" onclick="location.reload()">トップに戻る</button>
       </div>
     </div>
 
@@ -135,7 +131,8 @@
       const se = { pop: new Audio("puyo_pop.mp3"), move: new Audio("puyo_move.mp3"), rot: new Audio("puyo_rotate.mp3"), btn: new Audio("puyo_button.mp3"), set: new Audio("puyo_set.mp3"), ojama: new Audio("puyo_ojama.mp3"), count: new Audio("puyo_count.mp3") };
       function play(k) { if (se[k]) { se[k].currentTime = 0; se[k].play().catch(() => {}); } }
 
-      let peer, conn, myID = Math.floor(1e8 + Math.random() * 9e7).toString();
+      // IDを4桁に変更
+      let peer, conn, myID = Math.floor(1000 + Math.random() * 9000).toString();
       let myName = "YOU", enemyName = "ENEMY";
       let board, enemyBoard, activePuyo, enemyActivePuyo, myOjama = 0, enemyOjama = 0;
       let myScore = 0, enemyScore = 0, myWins = 0, enemyWins = 0;
@@ -169,6 +166,12 @@
 
       peer = new Peer(myID);
       peer.on("open", (id) => (document.getElementById("my-id-display").innerText = "YOUR ID: " + id));
+      peer.on("error", (err) => {
+        if(err.type === 'unavailable-id') {
+          myID = Math.floor(1000 + Math.random() * 9000).toString();
+          location.reload(); // IDが被ったらリロードして再生成
+        }
+      });
       peer.on("connection", (c) => { conn = c; setupConn(); });
 
       document.getElementById("connect-btn").onclick = () => {
