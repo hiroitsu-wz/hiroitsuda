@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>MARUICHI - Ultra Survival Perfect</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #0f172a;
+        touch-action: none;
+        color: white;
+        font-family: "Segoe UI", sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .moon {
+        position: absolute;
+        width: 400px;
+        height: 200px;
+        filter: blur(60px);
+        z-index: -1;
+        opacity: 0.2;
+        border-radius: 50%;
+        top: -50px;
+        right: -100px;
+        background: linear-gradient(to bottom, #38bdf8, #818cf8);
+      }
+      #ui-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(15, 23, 42, 0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal {
+        background: #1e293b;
+        padding: 25px;
+        border-radius: 20px;
+        border: 2px solid #334155;
+        width: 85%;
+        max-width: 320px;
+        text-align: center;
+        display: none;
+      }
+      #view-start {
+        display: block;
+      }
+      .big-btn {
+        margin-top: 10px;
+        width: 100%;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .difficulty-selector {
+        display: flex;
+        gap: 5px;
+        margin: 15px 0;
+        justify-content: center;
+      }
+      .diff-btn {
+        flex: 1;
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background: #0f172a;
+        color: #94a3b8;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .diff-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #60a5fa;
+      }
+      .battle-container {
+        display: flex;
+        gap: 5px;
+        margin-top: 5px;
+      }
+      .field-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+      }
+      canvas {
+        background: rgba(30, 41, 59, 0.95);
+        border: 2px solid #475569;
+        border-radius: 8px;
+        width: 150px;
+        height: 300px;
+      }
+      .my-field canvas {
+        border-color: #3b82f6;
+      }
+      .next-area {
+        margin-left: 5px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .next-box {
+        width: 35px;
+        height: 70px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 5px 0;
+        border: 1px solid #334155;
+      }
+      .controller {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        width: 95%;
+        max-width: 360px;
+        margin-top: 10px;
+      }
+      .ctrl-btn {
+        background: #334155;
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-size: 24px;
+        padding: 12px 0;
+        touch-action: none;
+      }
+      .btn-rot-l {
+        background: #ec4884;
+      }
+      .btn-rot-r {
+        background: #8b5cf6;
+      }
+      .btn-drop {
+        background: #3b82f6;
+        grid-column: span 4;
+        padding: 10px 0;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .ojama-bar {
+        height: 18px;
+        font-size: 10px;
+        color: #ef4444;
+        font-weight: bold;
+        width: 150px;
+        text-align: center;
+      }
+      .score-box {
+        font-size: 12px;
+        color: #38bdf8;
+        font-family: monospace;
+      }
+      .name-label {
+        font-size: 14px;
+        font-weight: bold;
+      }
+      .flash-overlay {
+        position: absolute;
+        inset: 0;
+        background: white;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 10;
+        border-radius: 8px;
+        transition: opacity 0.1s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="moon"></div>
+    <div id="ui-overlay">
+      <div id="view-start" class="modal">
+        <h2>ULTRA SURVIVAL</h2>
+        <div class="difficulty-selector">
+          <button class="diff-btn active" id="diff4" onclick="setDiff(4)">
+            4色
+          </button>
+          <button class="diff-btn" id="diff5" onclick="setDiff(5)">5色</button>
+        </div>
+        <button class="big-btn" onclick="startSequence()">
+          サバイバル開始
+        </button>
+      </div>
+      <div id="view-result" class="modal">
+        <h2 id="result-text" style="color: #ef4444">GAME OVER</h2>
+        <div
+          id="streak-status"
+          style="
+            font-size: 32px;
+            color: #facc15;
+            font-weight: 900;
+            margin: 10px 0;
+          "
+        >
+          0 STREAK
+        </div>
+        <button class="big-btn" onclick="location.reload()">タイトルへ</button>
+      </div>
+    </div>
+
+    <div
+      style="
+        margin-top: 5px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #facc15;
+      "
+    >
+      STREAK: <span id="main-streak-count">0</span>
+    </div>
+    <div class="battle-container">
+      <div class="field-wrapper my-field">
+        <div class="name-label">YOU</div>
+        <div id="my-score" class="score-box">SCORE: 0</div>
+        <div id="my-ojama-bar" class="ojama-bar"></div>
+        <div style="display: flex">
+          <canvas id="my-canvas"></canvas>
+          <div class="next-area">
+            <div class="next-box" id="next1"></div>
+            <div
+              class="next-box"
+              id="next2"
+              style="transform: scale(0.8)"
+            ></div>
+          </div>
+        </div>
+      </div>
+      <div class="field-wrapper">
+        <div class="name-label" id="enemy-label">CPU Lv.1</div>
+        <div id="enemy-score" class="score-box">SCORE: 0</div>
+        <div id="enemy-ojama-bar" class="ojama-bar"></div>
+        <canvas id="enemy-canvas"></canvas>
+        <div id="enemy-flash" class="flash-overlay"></div>
+      </div>
+    </div>
+
+    <div class="controller">
+      <button class="ctrl-btn" id="m-left">←</button>
+      <button class="ctrl-btn btn-rot-l" id="m-rot-l">↺</button>
+      <button class="ctrl-btn btn-rot-r" id="m-rot-r">↻</button>
+      <button class="ctrl-btn" id="m-right">→</button>
+      <button class="ctrl-btn btn-drop" id="m-down">QUICK DROP</button>
+    </div>
+
+    <script>
+      const ROWS = 12,
+        COLS = 6,
+        SIZE = 25;
+      const COLORS = [
+        null,
+        "#ef4444",
+        "#22c55e",
+        "#3b82f6",
+        "#eab308",
+        "#a855f7",
+      ];
+      let gameColorCount = 4,
+        gameActive = false,
+        streak = 0,
+        fallSpeed = 800;
+      let myScore = 0,
+        enemyScore = 0,
+        myOjama = 0,
+        enemyOjama = 0,
+        particles = [],
+        gameLoopTimer = null;
+
+      class PuyoGame {
+        constructor(canvasId, isCPU) {
+          this.canvas = document.getElementById(canvasId);
+          this.ctx = this.canvas.getContext("2d");
+          this.isCPU = isCPU;
+          this.board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+          this.bounceStates = Array.from({ length: ROWS }, () =>
+            Array.from({ length: COLS }, () => ({ scaleY: 1.0, velocity: 0 })),
+          );
+          this.activePuyo = null;
+          this.nextQueue = Array.from({ length: 3 }, () => ({
+            c1: this.rnd(),
+            c2: this.rnd(),
+          }));
+          this.isProcessing = false;
+          this.setupCanvas();
+        }
+        setupCanvas() {
+          const dpr = window.devicePixelRatio || 1;
+          this.canvas.width = 150 * dpr;
+          this.canvas.height = 300 * dpr;
+          this.ctx.scale(dpr, dpr);
+        }
+        rnd() {
+          return Math.floor(Math.random() * gameColorCount) + 1;
+        }
+        spawn() {
+          if (!gameActive) return;
+          if (this.board[0][2] !== 0) {
+            if (this.isCPU) {
+              levelUp();
+            } else {
+              endGame();
+            }
+            return;
+          }
+          this.activePuyo = { x: 2, y: 0, rot: 0, ...this.nextQueue.shift() };
+          this.nextQueue.push({ c1: this.rnd(), c2: this.rnd() });
+          if (!this.isCPU) updateNextUI(this.nextQueue);
+          if (this.isCPU) this.cpuThink();
+        }
+
+        cpuThink() {
+          // レベル30で最速（約50ms）になるようラグを調整
+          const baseLag = Math.max(50, 600 - streak * 19);
+          setTimeout(() => {
+            if (!gameActive || this.isProcessing || !this.activePuyo) return;
+
+            let candidates = [];
+            for (let r = 0; r < 4; r++) {
+              for (let x = 0; x < COLS; x++) {
+                if (this.canPlace(x, r)) {
+                  candidates.push({ x, r, score: this.evaluate(x, r) });
+                }
+              }
+            }
+
+            // スコア順にソート
+            candidates.sort((a, b) => b.score - a.score);
+
+            // レベルが低いほど、上位以外の手をわざと選ぶ確率を上げる
+            // Lv1: 50%でミス, Lv30以上: ほぼミスなし
+            const errorMargin = Math.max(0, 0.5 - streak * 0.02);
+            let choice =
+              Math.random() > errorMargin
+                ? candidates[0]
+                : candidates[
+                    Math.floor(Math.random() * Math.min(candidates.length, 5))
+                  ];
+
+            if (!choice) choice = candidates[0];
+
+            this.activePuyo.x = choice.x;
+            this.activePuyo.rot = choice.r;
+
+            // Lv10以上で、一定確率または状況に応じて即座に落とす
+            const dropChance = Math.min(0.9, streak * 0.03);
+            if (Math.random() < dropChance) {
+              while (canMove(0, 1, 0, this)) this.activePuyo.y++;
+              this.lock();
+            }
+          }, baseLag);
+        }
+
+        canPlace(x, r) {
+          const ox = [0, 1, 0, -1][r];
+          return (
+            x >= 0 &&
+            x + ox >= 0 &&
+            x < COLS &&
+            x + ox < COLS &&
+            this.board[0][x] === 0
+          );
+        }
+        evaluate(x, r) {
+          const ox = [0, 1, 0, -1][r],
+            oy = [-1, 0, 1, 0][r];
+          const y1 = this.getLandingY(x),
+            y2 = this.getLandingY(x + ox) + oy;
+
+          if (y1 < 0 || y2 < 0) return -999;
+
+          let score = y1 + y2; // 低い位置ほど良い
+          score += this.countAdj(x, y1, this.activePuyo.c1) * 8;
+          score += this.countAdj(x + ox, y2, this.activePuyo.c2) * 8;
+
+          // 窒息を避ける評価
+          if (y1 < 2 || y2 < 2) score -= 50;
+
+          return score;
+        }
+        getLandingY(x) {
+          for (let y = 0; y < ROWS; y++)
+            if (this.board[y][x] !== 0) return y - 1;
+          return ROWS - 1;
+        }
+        countAdj(x, y, c) {
+          let count = 0;
+          [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ].forEach(([dx, dy]) => {
+            const nx = x + dx,
+              ny = y + dy;
+            if (
+              nx >= 0 &&
+              nx < COLS &&
+              ny >= 0 &&
+              ny < ROWS &&
+              this.board[ny][nx] === c
+            )
+              count++;
+          });
+          return count;
+        }
+
+        async lock() {
+          if (!this.activePuyo) return;
+          this.isProcessing = true;
+          const a = this.activePuyo;
+          const ox = [0, 1, 0, -1][a.rot],
+            oy = [-1, 0, 1, 0][a.rot];
+          if (a.y >= 0) {
+            this.board[a.y][a.x] = a.c1;
+            this.applyBounce(a.x, a.y);
+          }
+          if (a.y + oy >= 0) {
+            this.board[a.y + oy][a.x + ox] = a.c2;
+            this.applyBounce(a.x + ox, a.y + oy);
+          }
+          this.activePuyo = null;
+          await this.handleChain();
+          if (gameActive) {
+            let targetOjama = this.isCPU ? enemyOjama : myOjama;
+            if (targetOjama > 0) await this.dropOjama();
+            this.spawn();
+          }
+          this.isProcessing = false;
+        }
+
+        async handleChain() {
+          let chain = 1;
+          while (true) {
+            let dropped = true;
+            while (dropped) {
+              dropped = false;
+              for (let y = ROWS - 2; y >= 0; y--) {
+                for (let x = 0; x < COLS; x++) {
+                  if (this.board[y][x] && !this.board[y + 1][x]) {
+                    this.board[y + 1][x] = this.board[y][x];
+                    this.board[y][x] = 0;
+                    dropped = true;
+                    if (y + 2 >= ROWS || this.board[y + 2][x] !== 0)
+                      this.applyBounce(x, y + 1);
+                  }
+                }
+              }
+              if (dropped) await new Promise((r) => setTimeout(r, 60));
+            }
+            let matches = this.findMatches();
+            if (matches.length === 0) break;
+
+            let totalEliminated = [...matches];
+            matches.forEach((p) => {
+              [
+                [1, 0],
+                [-1, 0],
+                [0, 1],
+                [0, -1],
+              ].forEach(([dx, dy]) => {
+                const nx = p.x + dx,
+                  ny = p.y + dy;
+                if (
+                  nx >= 0 &&
+                  nx < COLS &&
+                  ny >= 0 &&
+                  ny < ROWS &&
+                  this.board[ny][nx] === 9
+                ) {
+                  if (!totalEliminated.some((e) => e.x === nx && e.y === ny))
+                    totalEliminated.push({ x: nx, y: ny });
+                }
+              });
+            });
+
+            let puyoCount = totalEliminated.length,
+              attack = Math.floor(puyoCount / 2) + (chain > 1 ? chain * 4 : 0);
+            if (this.isCPU) {
+              enemyScore += puyoCount * 10 * chain;
+              let c = Math.min(enemyOjama, attack);
+              enemyOjama -= c;
+              myOjama += attack - c;
+            } else {
+              myScore += puyoCount * 10 * chain;
+              let c = Math.min(myOjama, attack);
+              myOjama -= c;
+              enemyOjama += attack - c;
+            }
+
+            totalEliminated.forEach((p) => {
+              const color =
+                this.board[p.y][p.x] === 9
+                  ? "#cbd5e1"
+                  : COLORS[this.board[p.y][p.x]];
+              for (let i = 0; i < 4; i++)
+                particles.push(
+                  new Particle(
+                    p.x * SIZE + SIZE / 2 + (this.isCPU ? 195 : 0),
+                    p.y * SIZE + SIZE / 2,
+                    color,
+                  ),
+                );
+              this.board[p.y][p.x] = 0;
+            });
+            updateScoreUI();
+            updateOjamaUI();
+            chain++;
+            await new Promise((r) => setTimeout(r, 400));
+          }
+        }
+        findMatches() {
+          let matched = [],
+            visited = Array.from({ length: ROWS }, () =>
+              Array(COLS).fill(false),
+            );
+          for (let y = 0; y < ROWS; y++) {
+            for (let x = 0; x < COLS; x++) {
+              if (
+                this.board[y][x] &&
+                this.board[y][x] !== 9 &&
+                !visited[y][x]
+              ) {
+                let group = [],
+                  color = this.board[y][x],
+                  stack = [{ x, y }];
+                while (stack.length) {
+                  let c = stack.pop();
+                  if (
+                    c.x < 0 ||
+                    c.x >= COLS ||
+                    c.y < 0 ||
+                    c.y >= ROWS ||
+                    visited[c.y][c.x] ||
+                    this.board[c.y][c.x] !== color
+                  )
+                    continue;
+                  visited[c.y][c.x] = true;
+                  group.push(c);
+                  stack.push(
+                    { x: c.x + 1, y: c.y },
+                    { x: c.x - 1, y: c.y },
+                    { x: c.x, y: c.y + 1 },
+                    { x: c.x, y: c.y - 1 },
+                  );
+                }
+                if (group.length >= 4) matched.push(...group);
+              }
+            }
+          }
+          return matched;
+        }
+        async dropOjama() {
+          let count = Math.min(this.isCPU ? enemyOjama : myOjama, 30);
+          if (this.isCPU) enemyOjama -= count;
+          else myOjama -= count;
+          updateOjamaUI();
+          while (count > 0) {
+            const line = Math.min(count, 6),
+              cols = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < line; i++) {
+              let x = cols[i];
+              for (let ty = ROWS - 1; ty >= 0; ty--)
+                if (this.board[ty][x] === 0) {
+                  this.board[ty][x] = 9;
+                  this.applyBounce(x, ty);
+                  break;
+                }
+            }
+            count -= line;
+            await new Promise((r) => setTimeout(r, 100));
+          }
+        }
+        applyBounce(x, y) {
+          if (y >= 0 && y < ROWS) this.bounceStates[y][x].scaleY = 0.65;
+        }
+        updateBounces() {
+          for (let y = 0; y < ROWS; y++) {
+            for (let x = 0; x < COLS; x++) {
+              let b = this.bounceStates[y][x];
+              b.velocity += (1.0 - b.scaleY) * 0.2;
+              b.velocity *= 0.75;
+              b.scaleY += b.velocity;
+            }
+          }
+        }
+        draw() {
+          this.updateBounces();
+          this.ctx.clearRect(0, 0, 150, 300);
+          this.ctx.strokeStyle = "#ef4444";
+          this.ctx.lineWidth = 1;
+          this.ctx.strokeRect(2 * SIZE, 0, SIZE, SIZE);
+          this.board.forEach((r, y) =>
+            r.forEach((v, x) => {
+              if (v) this.drawPuyo(x, y, v, this.bounceStates[y][x]);
+            }),
+          );
+          if (this.activePuyo && !this.isProcessing) {
+            const a = this.activePuyo,
+              ox = [0, 1, 0, -1][a.rot],
+              oy = [-1, 0, 1, 0][a.rot];
+            this.drawPuyo(a.x, a.y, a.c1);
+            this.drawPuyo(a.x + ox, a.y + oy, a.c2);
+          }
+        }
+        drawPuyo(x, y, v, b) {
+          if (y < 0) return;
+          let sY = b ? b.scaleY : 1.0,
+            sX = 1.0 / sY;
+          this.ctx.save();
+          this.ctx.translate(
+            x * SIZE + SIZE / 2,
+            y * SIZE + SIZE / 2 + (SIZE / 2) * (1 - sY),
+          );
+          this.ctx.scale(sX, sY);
+          this.ctx.fillStyle = v === 9 ? "#cbd5e1" : COLORS[v];
+          this.ctx.beginPath();
+          this.ctx.arc(0, 0, SIZE * 0.45, 0, 7);
+          this.ctx.fill();
+          this.ctx.fillStyle = "white";
+          this.ctx.beginPath();
+          this.ctx.arc(-5, 0, 4, 0, 7);
+          this.ctx.arc(5, 0, 4, 0, 7);
+          this.ctx.fill();
+          this.ctx.fillStyle = "black";
+          this.ctx.beginPath();
+          this.ctx.arc(-5, 0, 2, 0, 7);
+          this.ctx.arc(5, 0, 2, 0, 7);
+          this.ctx.fill();
+          this.ctx.restore();
+        }
+      }
+
+      function levelUp() {
+        streak++;
+        // 落下速度は徐々に速く
+        fallSpeed = Math.max(150, 800 - streak * 30);
+        document.getElementById("main-streak-count").innerText = streak;
+        document.getElementById("enemy-label").innerText =
+          `CPU Lv.${streak + 1}`;
+        const flash = document.getElementById("enemy-flash");
+        flash.style.opacity = "0.8";
+        setTimeout(() => {
+          flash.style.opacity = "0";
+          cpuGame.board = Array.from({ length: ROWS }, () =>
+            Array(COLS).fill(0),
+          );
+          cpuGame.spawn();
+          clearInterval(gameLoopTimer);
+          gameLoopTimer = setInterval(() => {
+            if (!gameActive) return;
+            [playerGame, cpuGame].forEach((g) => {
+              if (!g.isProcessing && g.activePuyo) {
+                if (canMove(0, 1, 0, g)) g.activePuyo.y++;
+                else g.lock();
+              }
+            });
+          }, fallSpeed);
+        }, 150);
+      }
+
+      function initGame() {
+        playerGame = new PuyoGame("my-canvas", false);
+        cpuGame = new PuyoGame("enemy-canvas", true);
+        gameActive = true;
+        updateScoreUI();
+        updateOjamaUI();
+        playerGame.spawn();
+        cpuGame.spawn();
+        if (gameLoopTimer) clearInterval(gameLoopTimer);
+        gameLoopTimer = setInterval(() => {
+          if (!gameActive) return;
+          [playerGame, cpuGame].forEach((g) => {
+            if (!g.isProcessing && g.activePuyo) {
+              if (canMove(0, 1, 0, g)) g.activePuyo.y++;
+              else g.lock();
+            }
+          });
+        }, fallSpeed);
+        requestAnimationFrame(render);
+      }
+      function render() {
+        if (!gameActive) return;
+        playerGame.draw();
+        cpuGame.draw();
+        particles = particles.filter((p) => p.life > 0);
+        particles.forEach((p) => {
+          p.update();
+          p.draw(playerGame.ctx);
+        });
+        requestAnimationFrame(render);
+      }
+      function canMove(dx, dy, dr, g) {
+        const p = g.activePuyo;
+        if (!p) return false;
+        const nr = (p.rot + dr + 4) % 4,
+          ox = [0, 1, 0, -1][nr],
+          oy = [-1, 0, 1, 0][nr];
+        const pts = [
+          { x: p.x + dx, y: p.y + dy },
+          { x: p.x + dx + ox, y: p.y + dy + oy },
+        ];
+        return pts.every(
+          (pt) =>
+            pt.x >= 0 &&
+            pt.x < COLS &&
+            pt.y < ROWS &&
+            (pt.y < 0 || g.board[pt.y][pt.x] === 0),
+        );
+      }
+      function handleInput(type) {
+        if (!gameActive || playerGame.isProcessing) return;
+        const p = playerGame.activePuyo;
+        if (!p) return;
+        if (type === "left" && canMove(-1, 0, 0, playerGame)) p.x--;
+        else if (type === "right" && canMove(1, 0, 0, playerGame)) p.x++;
+        else if (type === "down" && canMove(0, 1, 0, playerGame)) p.y++;
+        else if (type === "rotR" || type === "rotL") {
+          const dr = type === "rotR" ? 1 : -1;
+          if (canMove(0, 0, dr, playerGame)) p.rot = (p.rot + dr + 4) % 4;
+          else if (canMove(1, 0, dr, playerGame)) {
+            p.x++;
+            p.rot = (p.rot + dr + 4) % 4;
+          } else if (canMove(-1, 0, dr, playerGame)) {
+            p.x--;
+            p.rot = (p.rot + dr + 4) % 4;
+          }
+        } else if (type === "drop") {
+          while (canMove(0, 1, 0, playerGame)) p.y++;
+          playerGame.lock();
+        }
+      }
+      function startSequence() {
+        document.getElementById("ui-overlay").style.display = "none";
+        streak = 0;
+        fallSpeed = 800;
+        myScore = 0;
+        enemyScore = 0;
+        initGame();
+      }
+      function setDiff(n) {
+        gameColorCount = n;
+        document.getElementById("diff4").classList.toggle("active", n === 4);
+        document.getElementById("diff5").classList.toggle("active", n === 5);
+      }
+      function updateScoreUI() {
+        document.getElementById("my-score").innerText = `SCORE: ${myScore}`;
+        document.getElementById("enemy-score").innerText =
+          `SCORE: ${enemyScore}`;
+      }
+      function updateOjamaUI() {
+        document.getElementById("my-ojama-bar").innerText = "●".repeat(
+          Math.min(myOjama, 12),
+        );
+        document.getElementById("enemy-ojama-bar").innerText = "●".repeat(
+          Math.min(enemyOjama, 12),
+        );
+      }
+      function updateNextUI(q) {
+        [1, 2].forEach((i) => {
+          const p = q[i - 1];
+          document.getElementById(`next${i}`).innerHTML =
+            `<div style="width:16px;height:16px;border-radius:50%;background:${COLORS[p.c2]};margin-bottom:4px;"></div><div style="width:16px;height:16px;border-radius:50%;background:${COLORS[p.c1]};"></div>`;
+        });
+      }
+      function endGame() {
+        gameActive = false;
+        clearInterval(gameLoopTimer);
+        document.getElementById("ui-overlay").style.display = "flex";
+        document.getElementById("view-start").style.display = "none";
+        document.getElementById("view-result").style.display = "block";
+        document.getElementById("streak-status").innerText = `${streak} STREAK`;
+      }
+      class Particle {
+        constructor(x, y, color) {
+          this.x = x;
+          this.y = y;
+          this.color = color;
+          this.vx = (Math.random() - 0.5) * 8;
+          this.vy = (Math.random() - 0.5) * 8;
+          this.life = 1.0;
+        }
+        update() {
+          this.x += this.vx;
+          this.vy += 0.2;
+          this.y += this.vy;
+          this.life -= 0.05;
+        }
+        draw(ctx) {
+          ctx.save();
+          ctx.globalAlpha = this.life;
+          ctx.fillStyle = this.color;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, 2, 0, 7);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      window.addEventListener("keydown", (e) => {
+        if (!gameActive) return;
+        if (e.code === "ArrowLeft") handleInput("left");
+        if (e.code === "ArrowRight") handleInput("right");
+        if (e.code === "ArrowDown") handleInput("down");
+        if (e.code === "ArrowUp") handleInput("rotR");
+        if (e.code === "Space") {
+          e.preventDefault();
+          handleInput("drop");
+        }
+      });
+      const setupBtn = (id, type) =>
+        document.getElementById(id).addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          handleInput(type);
+        });
+      setupBtn("m-left", "left");
+      setupBtn("m-right", "right");
+      setupBtn("m-rot-l", "rotL");
+      setupBtn("m-rot-r", "rotR");
+      setupBtn("m-down", "drop");
+    </script>
+  </body>
+</html>
