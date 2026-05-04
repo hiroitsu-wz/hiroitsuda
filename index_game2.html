@@ -6,9 +6,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>TANIMARU - Complete Ultimate Edition</title>
+    <title>TANIMARU - Ultimate Complete Edition</title>
     <style>
-      /* スタイルは2の洗練されたデザインを維持 */
       html,
       body {
         width: 100%;
@@ -134,6 +133,7 @@
         z-index: 50;
         text-align: center;
         white-space: pre-wrap;
+        transition: all 0.2s ease-out;
       }
       .controller {
         display: grid;
@@ -212,7 +212,6 @@
         border: 1px solid #334155;
         border-radius: 20px;
         background: rgba(30, 41, 59, 0.7);
-        font-family: sans-serif;
       "
       >◀ PORTAL</a
     >
@@ -306,7 +305,7 @@
     </div>
 
     <script>
-      // --- 音源と画像 (1のピッチ変更対応) ---
+      // --- 音源と画像 ---
       const se = {
         set: new Audio("puyo_set.mp3"),
         pop: new Audio("puyo_pop.mp3"),
@@ -321,6 +320,13 @@
         audio.currentTime = 0;
         audio.playbackRate = pitch;
         audio.play().catch(() => {});
+      }
+
+      // XSS対策用エスケープ関数
+      function escapeHTML(str) {
+        const div = document.createElement("div");
+        div.innerText = str;
+        return div.innerHTML;
       }
 
       const puyoImages = [];
@@ -387,7 +393,6 @@
         }
       }
 
-      // 2の堅牢な初期化関数
       function initGameVars() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
         score = 0;
@@ -417,7 +422,6 @@
           Math.PI * 2,
         );
         targetCtx.clip();
-        // 画像優先、なければ色塗り
         if (
           puyoImages[colorIndex]?.complete &&
           puyoImages[colorIndex].naturalWidth !== 0
@@ -529,8 +533,11 @@
           chain++;
           score += result.matches.length * 10 * chain;
           scoreElement.innerText = score;
-          showChainMsg(chain > 1 ? `${chain} CHAIN!` : "HIT!");
-          playSE(se.pop, 1.0 + chain * 0.1); // 1のピッチアップ移植
+
+          // 連鎖メッセージの表示
+          showChainMsg(chain > 1 ? `${chain} CHAIN!` : "HIT!", chain);
+          playSE(se.pop, 1.0 + chain * 0.1);
+
           result.matches.forEach((p) => {
             const color = COLORS[board[p.y][p.x]] || "#fff";
             for (let i = 0; i < 8; i++)
@@ -542,10 +549,10 @@
           draw();
           await new Promise((r) => setTimeout(r, 450));
         }
-        if (board.every((row) => row.every((c) => c === 0))) {
+        if (board.every((row) => row.every((c) => c === 0)) && chain > 0) {
           score += 2100;
           scoreElement.innerText = score;
-          showChainMsg("ALL CLEAR!\n+2100");
+          showChainMsg("ALL CLEAR!\n+2100", 0);
         }
       }
 
@@ -644,7 +651,6 @@
         return { matches: matched };
       }
 
-      // --- パーティクル (2の洗練された挙動) ---
       class Particle {
         constructor(x, y, color) {
           this.x = x;
@@ -671,7 +677,6 @@
         }
       }
 
-      // --- システム・長押し操作 ---
       function checkUserAndInit() {
         document.getElementById("loading-modal").classList.add("hidden");
         playerName = localStorage.getItem("puyoUserName");
@@ -705,7 +710,7 @@
       }
 
       function saveScore(s) {
-        let key = `puyo_ultimate_img_rank_${colorCount}`; // キーの分離
+        let key = `puyo_ultimate_img_rank_${colorCount}`;
         let data = JSON.parse(localStorage.getItem(key) || '{"users":[]}');
         let user = data.users.find((u) => u.id === playerID);
         if (user) {
@@ -716,14 +721,25 @@
         localStorage.setItem(key, JSON.stringify(data));
       }
 
-      function showChainMsg(t) {
+      // 演出強化版 showChainMsg
+      function showChainMsg(t, chainNum = 0) {
+        if (chainNum >= 10) {
+          chainMsg.style.color = "#ff00ff";
+          chainMsg.style.textShadow = "0 0 15px #fff, 2px 2px 0 #000";
+        } else if (chainNum >= 5) {
+          chainMsg.style.color = "#fbbf24";
+          chainMsg.style.textShadow = "0 0 8px #f59e0b, 2px 2px 0 #000";
+        } else {
+          chainMsg.style.color = "#facc15";
+          chainMsg.style.textShadow = "2px 2px 0 #000";
+        }
+
         chainMsg.innerText = t;
         setTimeout(() => {
           if (chainMsg.innerText === t) chainMsg.innerText = "";
         }, 1200);
       }
 
-      // --- 入力・長押し設定 ---
       function startMove(dx) {
         if (!gameRunning || isPaused || isProcessing) return;
         if (canMove(activePuyo, dx, 0)) {
@@ -842,16 +858,16 @@
       };
       document.getElementById("startRankBtn").onclick = () => {
         playSE(se.rank);
-        let key = `puyo_ultimate_img_rank_${colorCount}`;
+        const key = `puyo_ultimate_img_rank_${colorCount}`;
         let data = JSON.parse(localStorage.getItem(key) || '{"users":[]}');
         let sorted = data.users
           .sort((a, b) => b.highScore - a.highScore)
           .slice(0, 10);
         let html = `<table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>`;
-        sorted.forEach(
-          (u, i) =>
-            (html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`),
-        );
+        sorted.forEach((u, i) => {
+          const safeName = escapeHTML(u.name); // セキュリティ対策
+          html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${safeName}</td><td>${u.highScore}</td></tr>`;
+        });
         document.getElementById("rank-list").innerHTML = html + `</table>`;
         document.getElementById("rank-title").innerText =
           `${colorCount} COLORS Top 10`;
