@@ -6,9 +6,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>MANMARU - Sound Master Ultimate</title>
+    <title>PUYOichi - Bouncy Ultimate</title>
     <style>
-      /* スタイルは1の洗練されたダークテーマを維持 */
       html,
       body {
         width: 100%;
@@ -132,6 +131,7 @@
         z-index: 50;
         text-align: center;
         white-space: pre-wrap;
+        transition: color 0.2s;
       }
       .controller {
         display: grid;
@@ -196,24 +196,6 @@
     </style>
   </head>
   <body>
-    <a
-      href="index_potal.html"
-      style="
-        position: absolute;
-        top: 15px;
-        left: 15px;
-        z-index: 2000;
-        color: #94a3b8;
-        text-decoration: none;
-        font-size: 14px;
-        padding: 8px 16px;
-        border: 1px solid #334155;
-        border-radius: 20px;
-        background: rgba(30, 41, 59, 0.7);
-        font-family: sans-serif;
-      "
-      >◀ PORTAL</a
-    >
     <div class="moon"></div>
     <div id="overlay">
       <div id="login-modal" class="modal hidden">
@@ -301,7 +283,7 @@
     </div>
 
     <script>
-      // --- 音源設定 (1のピッチ変更対応) ---
+      // --- 音源 ---
       const se = {
         set: new Audio("puyo_set.mp3"),
         pop: new Audio("puyo_pop.mp3"),
@@ -347,12 +329,41 @@
         gameRunning,
         waitingForStart;
       let playerName, playerID, fallCounter, lockTimer, colorCount;
-      const LOCK_DELAY = 35,
-        BASE_FALL_SPEED = 40;
       let particles = [];
       let moveRepeatTimer = null;
+      let bounceStates = []; // 弾力アニメーション用
 
-      // --- クラス定義 (2のパーティクル移植) ---
+      const LOCK_DELAY = 35,
+        BASE_FALL_SPEED = 40;
+
+      // --- 弾力システム ---
+      function initBounceStates() {
+        bounceStates = Array.from({ length: ROWS }, () =>
+          Array.from({ length: COLS }, () => ({ scaleY: 1.0, velocity: 0 })),
+        );
+      }
+
+      function applyBounce(x, y) {
+        if (y < 0 || y >= ROWS || x < 0 || x >= COLS) return;
+        bounceStates[y][x].scaleY = 0.7; // グニュッと縮む
+        bounceStates[y][x].velocity = 0;
+      }
+
+      function updateBounces() {
+        const tension = 0.15; // バネの強さ
+        const friction = 0.8; // 減衰
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            let b = bounceStates[y][x];
+            let force = (1.0 - b.scaleY) * tension;
+            b.velocity += force;
+            b.velocity *= friction;
+            b.scaleY += b.velocity;
+          }
+        }
+      }
+
+      // --- クラス定義 ---
       class Particle {
         constructor(x, y, color) {
           this.x = x;
@@ -396,9 +407,10 @@
         }
       }
 
-      // --- 初期化・描画ロジック (2の構造を1に適用) ---
+      // --- 初期化・描画 ---
       function initGameVars() {
         board = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        initBounceStates();
         score = 0;
         scoreElement.innerText = "0";
         activePuyo = null;
@@ -413,39 +425,64 @@
         particles = [];
       }
 
-      function drawUnit(targetCtx, x, y, colorIndex, size) {
-        const px = x * size + size / 2,
-          py = y * size + size / 2,
-          r = size * 0.45;
+      function drawUnit(
+        targetCtx,
+        x,
+        y,
+        colorIndex,
+        size,
+        isBoardPuyo = false,
+      ) {
+        // 弾力値の取得（ボード上のぷよのみ）
+        const b =
+          isBoardPuyo && x >= 0 && x < COLS && y >= 0 && y < ROWS
+            ? bounceStates[y][x]
+            : { scaleY: 1, velocity: 0 };
+
+        const sY = b.scaleY;
+        const sX = 1 / sY; // 体積保存（縦が縮めば横に広がる）
+
+        const px = x * size + size / 2;
+        const py = y * size + size / 2;
+        const r = size * 0.45;
+
+        targetCtx.save();
+        // 下端を固定してスケール
+        targetCtx.translate(px, py + (size / 2) * (1 - sY));
+        targetCtx.scale(sX, sY);
+
         targetCtx.fillStyle = COLORS[colorIndex];
         targetCtx.beginPath();
-        targetCtx.arc(px, py, r, 0, Math.PI * 2);
+        targetCtx.arc(0, 0, r, 0, Math.PI * 2);
         targetCtx.fill();
-        // 目玉 (1のスタイル)
+
+        // 目玉
         targetCtx.fillStyle = "white";
         targetCtx.beginPath();
-        targetCtx.arc(px - r / 3, py, r / 4, 0, Math.PI * 2);
-        targetCtx.arc(px + r / 3, py, r / 4, 0, Math.PI * 2);
+        targetCtx.arc(-r / 3, 0, r / 4, 0, Math.PI * 2);
+        targetCtx.arc(r / 3, 0, r / 4, 0, Math.PI * 2);
         targetCtx.fill();
         targetCtx.fillStyle = "black";
         targetCtx.beginPath();
-        targetCtx.arc(px - r / 3, py, r / 8, 0, Math.PI * 2);
-        targetCtx.arc(px + r / 3, py, r / 8, 0, Math.PI * 2);
+        targetCtx.arc(-r / 3, 0, r / 8, 0, Math.PI * 2);
+        targetCtx.arc(r / 3, 0, r / 8, 0, Math.PI * 2);
         targetCtx.fill();
+        targetCtx.restore();
       }
 
       function draw() {
+        updateBounces();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         board.forEach((row, y) =>
           row.forEach((val, x) => {
-            if (val) drawUnit(ctx, x, y, val, SIZE);
+            if (val) drawUnit(ctx, x, y, val, SIZE, true);
           }),
         );
         if (board[0][2] === 0) drawXMark(2, 0);
         if (activePuyo)
           activePuyo
             .getPos()
-            .forEach((p) => drawUnit(ctx, p.x, p.y, p.c, SIZE));
+            .forEach((p) => drawUnit(ctx, p.x, p.y, p.c, SIZE, false));
         particles.forEach((p, i) => {
           p.update();
           p.draw(ctx);
@@ -482,7 +519,7 @@
         ctx.stroke();
       }
 
-      // --- ゲームコアロジック ---
+      // --- コアロジック ---
       async function gameLoop() {
         if (!gameRunning || waitingForStart || isPaused) return;
         if (!isProcessing) {
@@ -511,6 +548,7 @@
             if (++lockTimer >= LOCK_DELAY) {
               lockPuyo();
               playSE(se.set);
+              activePuyo.getPos().forEach((p) => applyBounce(p.x, p.y));
               activePuyo = null;
               isProcessing = true;
               await handleChain();
@@ -532,7 +570,7 @@
           score += result.matches.length * 10 * chain;
           scoreElement.innerText = score;
           showChainMsg(chain > 1 ? `${chain} CHAIN!` : "HIT!");
-          playSE(se.pop, 1.0 + chain * 0.1); // 1のピッチアップ移植
+          playSE(se.pop, 1.0 + chain * 0.1);
           result.matches.forEach((p) => {
             const color = COLORS[board[p.y][p.x]] || "#fff";
             for (let i = 0; i < 8; i++)
@@ -561,6 +599,9 @@
                 board[y + 1][x] = board[y][x];
                 board[y][x] = 0;
                 moved = true;
+                // 着地判定
+                if (y + 1 === ROWS - 1 || board[y + 2][x] !== 0)
+                  applyBounce(x, y + 1);
               }
             }
           }
@@ -644,7 +685,7 @@
         return { matches: matched };
       }
 
-      // --- 入力・システム処理 (1の長押し + 2のポインター) ---
+      // --- システム ---
       function startMove(dx) {
         if (!gameRunning || isPaused || isProcessing) return;
         if (canMove(activePuyo, dx, 0)) {
@@ -687,37 +728,8 @@
         }
       });
 
-      window.addEventListener("keydown", (e) => {
-        if (!gameRunning || isPaused || isProcessing) return;
-        if (e.key === "ArrowLeft") {
-          if (canMove(activePuyo, -1, 0)) {
-            activePuyo.x--;
-            playSE(se.move);
-          }
-        }
-        if (e.key === "ArrowRight") {
-          if (canMove(activePuyo, 1, 0)) {
-            activePuyo.x++;
-            playSE(se.move);
-          }
-        }
-        if (e.key === "ArrowDown") {
-          if (canMove(activePuyo, 0, 1)) {
-            activePuyo.y++;
-            fallCounter = 0;
-          }
-        }
-        if (e.key === "z" || e.key === "ArrowUp") rotate(-1);
-        if (e.key === "x" || e.key === "Shift") rotate(1);
-        if (e.key === " ") {
-          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
-          lockTimer = LOCK_DELAY;
-        }
-        draw();
-      });
-
       function saveScore(s) {
-        const key = `puyo_ultimate_rank_${colorCount}`; // 2のキー分離移植
+        const key = `puyo_ultimate_rank_${colorCount}`;
         let data = JSON.parse(localStorage.getItem(key) || '{"users":[]}');
         let user = data.users.find((u) => u.id === playerID);
         if (user) {
@@ -748,13 +760,31 @@
           colorCount === 5 ? "2px solid #38bdf8" : "none";
       }
 
+      function escapeHTML(str) {
+        const div = document.createElement("div");
+        div.innerText = str;
+        return div.innerHTML;
+      }
+
       function showChainMsg(t) {
+        const c = parseInt(t) || 0;
+        if (c >= 10) {
+          chainMsg.style.color = "#ff00ff";
+          chainMsg.style.textShadow = "0 0 10px #fff, 2px 2px 0 #000";
+        } else if (c >= 5) {
+          chainMsg.style.color = "#fbbf24";
+          chainMsg.style.textShadow = "0 0 5px #f59e0b, 2px 2px 0 #000";
+        } else {
+          chainMsg.style.color = "#facc15";
+          chainMsg.style.textShadow = "2px 2px 0 #000";
+        }
         chainMsg.innerText = t;
         setTimeout(() => {
           if (chainMsg.innerText === t) chainMsg.innerText = "";
         }, 1200);
       }
 
+      // --- イベントリスナー ---
       document.getElementById("loginBtn").onclick = () => {
         const val = document.getElementById("nickname").value.trim();
         if (val) {
@@ -808,10 +838,9 @@
           .sort((a, b) => b.highScore - a.highScore)
           .slice(0, 10);
         let html = `<table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>`;
-        sorted.forEach(
-          (u, i) =>
-            (html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${u.name}</td><td>${u.highScore}</td></tr>`),
-        );
+        sorted.forEach((u, i) => {
+          html += `<tr class="${u.id === playerID ? "highlight" : ""}"><td>${i + 1}</td><td>${escapeHTML(u.name)}</td><td>${u.highScore}</td></tr>`;
+        });
         document.getElementById("rank-list").innerHTML = html + `</table>`;
         document.getElementById("rank-title").innerText =
           `${colorCount} COLORS Top 10`;
@@ -822,70 +851,37 @@
         showStartScreen();
         playSE(se.btn);
       };
-// --- 追加演出・セキュリティ強化セクション ---
 
-      /**
-       * 1. 視覚演出：連鎖数に応じたメッセージカラーの変更
-       * showChainMsg 関数を上書きして、連鎖ごとに色を豪華にします
-       */
-      const originalShowChainMsg = showChainMsg;
-      showChainMsg = (t) => {
-        const chainCount = parseInt(t) || 0;
-        if (chainCount >= 10) {
-          chainMsg.style.color = "#ff00ff"; // 10連鎖以上はマゼンタ
-          chainMsg.style.textShadow = "0 0 10px #fff, 2px 2px 0 #000";
-        } else if (chainCount >= 5) {
-          chainMsg.style.color = "#fbbf24"; // 5連鎖以上はゴールド
-          chainMsg.style.textShadow = "0 0 5px #f59e0b, 2px 2px 0 #000";
-        } else {
-          chainMsg.style.color = "#facc15"; // 通常はイエロー
-          chainMsg.style.textShadow = "2px 2px 0 #000";
+      // キーボード操作
+      window.addEventListener("keydown", (e) => {
+        if (!gameRunning || isPaused || isProcessing) return;
+        if (e.key === "ArrowLeft") {
+          if (canMove(activePuyo, -1, 0)) {
+            activePuyo.x--;
+            playSE(se.move);
+          }
         }
-        originalShowChainMsg(t);
-      };
+        if (e.key === "ArrowRight") {
+          if (canMove(activePuyo, 1, 0)) {
+            activePuyo.x++;
+            playSE(se.move);
+          }
+        }
+        if (e.key === "ArrowDown") {
+          if (canMove(activePuyo, 0, 1)) {
+            activePuyo.y++;
+            fallCounter = 0;
+          }
+        }
+        if (e.key === "z" || e.key === "ArrowUp") rotate(-1);
+        if (e.key === "x" || e.key === "Shift") rotate(1);
+        if (e.key === " ") {
+          while (canMove(activePuyo, 0, 1)) activePuyo.y++;
+          lockTimer = LOCK_DELAY;
+        }
+        draw();
+      });
 
-      /**
-       * 2. セキュリティ：XSS対策（エスケープ処理）
-       * ランキング表示時の名前を安全に表示するための関数
-       */
-      function escapeHTML(str) {
-        const div = document.createElement('div');
-        div.innerText = str;
-        return div.innerHTML;
-      }
-
-      /**
-       * 3. ランキング表示のセキュリティ強化
-       * 既存のランキング生成ロジックを安全なものに差し替えます
-       */
-      document.getElementById("startRankBtn").onclick = () => {
-        playSE(se.rank);
-        const key = `puyo_ultimate_rank_${colorCount}`;
-        let data = JSON.parse(localStorage.getItem(key) || '{"users":[]}');
-        let sorted = data.users
-          .sort((a, b) => b.highScore - a.highScore)
-          .slice(0, 10);
-        
-        let html = `<table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>`;
-        sorted.forEach((u, i) => {
-          // 名前をエスケープして安全に表示
-          const safeName = escapeHTML(u.name);
-          const rowClass = u.id === playerID ? "highlight" : "";
-          html += `<tr class="${rowClass}"><td>${i + 1}</td><td>${safeName}</td><td>${u.highScore}</td></tr>`;
-        });
-        
-        document.getElementById("rank-list").innerHTML = html + `</table>`;
-        document.getElementById("rank-title").innerText = `${colorCount} COLORS Top 10`;
-        document.getElementById("start-modal").classList.add("hidden");
-        document.getElementById("rank-modal").classList.remove("hidden");
-      };
-
-      /**
-       * 4. 操作性向上：キー長押しのリピート防止（オプション）
-       * 意図しない連打を防ぐためのガード
-       */
-      let isKeyDown = false;
-      window.addEventListener("keyup", () => { isKeyDown = false; });
       // --- スタートアップ ---
       playerName = localStorage.getItem("puyoUserName");
       playerID = localStorage.getItem("puyoUserID") || "UID-" + Date.now();
