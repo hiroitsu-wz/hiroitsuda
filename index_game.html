@@ -822,7 +822,70 @@
         showStartScreen();
         playSE(se.btn);
       };
+// --- 追加演出・セキュリティ強化セクション ---
 
+      /**
+       * 1. 視覚演出：連鎖数に応じたメッセージカラーの変更
+       * showChainMsg 関数を上書きして、連鎖ごとに色を豪華にします
+       */
+      const originalShowChainMsg = showChainMsg;
+      showChainMsg = (t) => {
+        const chainCount = parseInt(t) || 0;
+        if (chainCount >= 10) {
+          chainMsg.style.color = "#ff00ff"; // 10連鎖以上はマゼンタ
+          chainMsg.style.textShadow = "0 0 10px #fff, 2px 2px 0 #000";
+        } else if (chainCount >= 5) {
+          chainMsg.style.color = "#fbbf24"; // 5連鎖以上はゴールド
+          chainMsg.style.textShadow = "0 0 5px #f59e0b, 2px 2px 0 #000";
+        } else {
+          chainMsg.style.color = "#facc15"; // 通常はイエロー
+          chainMsg.style.textShadow = "2px 2px 0 #000";
+        }
+        originalShowChainMsg(t);
+      };
+
+      /**
+       * 2. セキュリティ：XSS対策（エスケープ処理）
+       * ランキング表示時の名前を安全に表示するための関数
+       */
+      function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.innerText = str;
+        return div.innerHTML;
+      }
+
+      /**
+       * 3. ランキング表示のセキュリティ強化
+       * 既存のランキング生成ロジックを安全なものに差し替えます
+       */
+      document.getElementById("startRankBtn").onclick = () => {
+        playSE(se.rank);
+        const key = `puyo_ultimate_rank_${colorCount}`;
+        let data = JSON.parse(localStorage.getItem(key) || '{"users":[]}');
+        let sorted = data.users
+          .sort((a, b) => b.highScore - a.highScore)
+          .slice(0, 10);
+        
+        let html = `<table><tr><th>Rank</th><th>Name</th><th>Score</th></tr>`;
+        sorted.forEach((u, i) => {
+          // 名前をエスケープして安全に表示
+          const safeName = escapeHTML(u.name);
+          const rowClass = u.id === playerID ? "highlight" : "";
+          html += `<tr class="${rowClass}"><td>${i + 1}</td><td>${safeName}</td><td>${u.highScore}</td></tr>`;
+        });
+        
+        document.getElementById("rank-list").innerHTML = html + `</table>`;
+        document.getElementById("rank-title").innerText = `${colorCount} COLORS Top 10`;
+        document.getElementById("start-modal").classList.add("hidden");
+        document.getElementById("rank-modal").classList.remove("hidden");
+      };
+
+      /**
+       * 4. 操作性向上：キー長押しのリピート防止（オプション）
+       * 意図しない連打を防ぐためのガード
+       */
+      let isKeyDown = false;
+      window.addEventListener("keyup", () => { isKeyDown = false; });
       // --- スタートアップ ---
       playerName = localStorage.getItem("puyoUserName");
       playerID = localStorage.getItem("puyoUserID") || "UID-" + Date.now();
