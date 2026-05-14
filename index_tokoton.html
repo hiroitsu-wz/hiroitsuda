@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>MARUICHI - Ultra Survival Perfect (Control Swap)</title>
+    <title>MARUICHI - Ultra Survival Perfect (Force Rotation)</title>
     <style>
       html,
       body {
@@ -199,6 +199,16 @@
         opacity: 0;
         transition: opacity 0.2s;
       }
+      .sys-btn {
+        padding: 4px 10px;
+        font-size: 12px;
+        border-radius: 5px;
+        border: none;
+        color: white;
+        background: #475569;
+        cursor: pointer;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -226,6 +236,22 @@
           サバイバル開始
         </button>
       </div>
+
+      <div id="view-pause" class="modal">
+        <h2 style="color: #38bdf8">PAUSED</h2>
+        <p>ゲームを一時停止しています</p>
+        <button class="big-btn" onclick="handleBtnClick(togglePause)">
+          ゲームを再開
+        </button>
+        <button
+          class="big-btn"
+          style="background: #475569; margin-top: 10px"
+          onclick="handleBtnClick(() => location.reload())"
+        >
+          タイトルへ戻る
+        </button>
+      </div>
+
       <div id="view-result" class="modal">
         <h2 id="result-text" style="color: #ef4444">GAME OVER</h2>
         <div
@@ -248,16 +274,15 @@
       </div>
     </div>
 
-    <div
-      style="
-        margin-top: 5px;
-        font-size: 16px;
-        font-weight: bold;
-        color: #facc15;
-      "
-    >
-      STREAK: <span id="main-streak-count">0</span>
+    <div style="margin-top: 5px; display: flex; align-items: center; gap: 15px">
+      <div style="font-size: 16px; font-weight: bold; color: #facc15">
+        STREAK: <span id="main-streak-count">0</span>
+      </div>
+      <button class="sys-btn" onclick="handleBtnClick(togglePause)">
+        PAUSE
+      </button>
     </div>
+
     <div class="battle-container">
       <div class="field-wrapper my-field">
         <div class="name-label">YOU</div>
@@ -326,6 +351,7 @@
       ];
       let gameColorCount = 4,
         gameActive = false,
+        isPaused = false,
         streak = 0,
         fallSpeed = 800;
       let myScore = 0,
@@ -378,9 +404,16 @@
           if (this.isCPU) this.cpuThink();
         }
         cpuThink() {
+          if (isPaused) return;
           const baseLag = Math.max(50, 600 - streak * 19);
           setTimeout(() => {
-            if (!gameActive || this.isProcessing || !this.activePuyo) return;
+            if (
+              !gameActive ||
+              isPaused ||
+              this.isProcessing ||
+              !this.activePuyo
+            )
+              return;
             let candidates = [];
             for (let r = 0; r < 4; r++) {
               for (let x = 0; x < COLS; x++) {
@@ -685,6 +718,22 @@
         }
       }
 
+      function togglePause() {
+        if (!gameActive) return;
+        isPaused = !isPaused;
+        const uiOverlay = document.getElementById("ui-overlay"),
+          pauseModal = document.getElementById("view-pause");
+        if (isPaused) {
+          uiOverlay.style.display = "flex";
+          pauseModal.style.display = "block";
+          clearInterval(gameLoopTimer);
+        } else {
+          uiOverlay.style.display = "none";
+          pauseModal.style.display = "none";
+          gameLoopTimer = setInterval(gameStep, fallSpeed);
+        }
+      }
+
       function levelUp() {
         streak++;
         fallSpeed = Math.max(150, 800 - streak * 30);
@@ -699,12 +748,14 @@
             Array(COLS).fill(0),
           );
           cpuGame.spawn();
-          clearInterval(gameLoopTimer);
-          gameLoopTimer = setInterval(gameStep, fallSpeed);
+          if (!isPaused) {
+            clearInterval(gameLoopTimer);
+            gameLoopTimer = setInterval(gameStep, fallSpeed);
+          }
         }, 150);
       }
       function gameStep() {
-        if (!gameActive) return;
+        if (!gameActive || isPaused) return;
         [playerGame, cpuGame].forEach((g) => {
           if (!g.isProcessing && g.activePuyo) {
             if (canMove(0, 1, 0, g)) g.activePuyo.y++;
@@ -716,6 +767,7 @@
         playerGame = new PuyoGame("my-canvas", false);
         cpuGame = new PuyoGame("enemy-canvas", true);
         gameActive = true;
+        isPaused = false;
         updateScoreUI();
         updateOjamaUI();
         playerGame.spawn();
@@ -753,8 +805,10 @@
             (pt.y < 0 || g.board[pt.y][pt.x] === 0),
         );
       }
+
+      // --- 強化された回転処理 ---
       function handleInput(type) {
-        if (!gameActive || playerGame.isProcessing) return;
+        if (!gameActive || isPaused || playerGame.isProcessing) return;
         const p = playerGame.activePuyo;
         if (!p) return;
         if (type === "left" && canMove(-1, 0, 0, playerGame)) {
@@ -768,19 +822,32 @@
           playSound("move");
         } else if (type === "rotR" || type === "rotL") {
           const dr = type === "rotR" ? 1 : -1;
+          // 1. その場で回転可能か
           if (canMove(0, 0, dr, playerGame)) {
             p.rot = (p.rot + dr + 4) % 4;
             playSound("rotate");
-          } else if (canMove(1, 0, dr, playerGame)) {
+          }
+          // 2. 右にズレれば回転可能か（壁蹴り右）
+          else if (canMove(1, 0, dr, playerGame)) {
             p.x++;
             p.rot = (p.rot + dr + 4) % 4;
             playSound("rotate");
-          } else if (canMove(-1, 0, dr, playerGame)) {
+          }
+          // 3. 左にズレれば回転可能か（壁蹴り左）
+          else if (canMove(-1, 0, dr, playerGame)) {
             p.x--;
             p.rot = (p.rot + dr + 4) % 4;
             playSound("rotate");
-          } else if (canMove(0, -1, dr, playerGame)) {
+          }
+          // 4. 上にズレれば回転可能か（挟まった時の救済：180度反転に近い挙動を許容）
+          else if (canMove(0, -1, dr, playerGame)) {
             p.y--;
+            p.rot = (p.rot + dr + 4) % 4;
+            playSound("rotate");
+          }
+          // 5. それでもダメなら、強制的に上下反転（軸はそのまま、回転だけ進める）
+          // 左右が埋まっていても、回転状態だけ変えることでボタンを2回押せば上下が入れ替わるようにする
+          else {
             p.rot = (p.rot + dr + 4) % 4;
             playSound("rotate");
           }
@@ -789,8 +856,10 @@
           playerGame.lock();
         }
       }
+
       function startSequence() {
         document.getElementById("ui-overlay").style.display = "none";
+        document.getElementById("view-start").style.display = "none";
         streak = 0;
         fallSpeed = 800;
         myScore = 0;
@@ -827,6 +896,7 @@
         clearInterval(gameLoopTimer);
         document.getElementById("ui-overlay").style.display = "flex";
         document.getElementById("view-start").style.display = "none";
+        document.getElementById("view-pause").style.display = "none";
         document.getElementById("view-result").style.display = "block";
         document.getElementById("streak-status").innerText = `${streak} STREAK`;
       }
@@ -856,29 +926,25 @@
         }
       }
 
-      // --- キーボード操作設定 (ここを修正しました) ---
       window.addEventListener("keydown", (e) => {
         if (!gameActive) return;
+        if (e.code === "KeyP" || e.code === "Escape") {
+          togglePause();
+          return;
+        }
+        if (isPaused) return;
         if (e.code === "ArrowLeft") handleInput("left");
         if (e.code === "ArrowRight") handleInput("right");
         if (e.code === "ArrowDown") handleInput("down");
-
-        // 上矢印キーで左回転
-        if (e.code === "ArrowUp") {
-          handleInput("rotL");
-        }
-        // Shiftキーで右回転 (左右どちらのShiftでも可)
-        if (e.code === "ShiftLeft" || e.code === "ShiftRight") {
+        if (e.code === "ArrowUp") handleInput("rotL");
+        if (e.code === "ShiftLeft" || e.code === "ShiftRight")
           handleInput("rotR");
-        }
-
         if (e.code === "Space") {
           e.preventDefault();
           handleInput("drop");
         }
       });
 
-      // --- モバイルボタン設定 (回転の向きを直感的に合わせました) ---
       const setupBtn = (id, type) =>
         document.getElementById(id).addEventListener("pointerdown", (e) => {
           e.preventDefault();
@@ -886,8 +952,8 @@
         });
       setupBtn("m-left", "left");
       setupBtn("m-right", "right");
-      setupBtn("m-rot-l", "rotL"); // Lボタンで右回転
-      setupBtn("m-rot-r", "rotR"); // Rボタンで左回転
+      setupBtn("m-rot-l", "rotL");
+      setupBtn("m-rot-r", "rotR");
       setupBtn("m-down", "drop");
     </script>
   </body>
